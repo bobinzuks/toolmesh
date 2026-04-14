@@ -9,6 +9,7 @@ import { ProductRepository } from './registry/repository.js';
 import { RecommendationEngine } from './recommendation/engine.js';
 import { createServer } from './mcp/server.js';
 import { seedDatabase } from './registry/seeder.js';
+import { verifyAllLinks } from './registry/link-integrity.js';
 import { join } from 'node:path';
 
 async function main(): Promise<void> {
@@ -51,6 +52,18 @@ async function main(): Promise<void> {
     }
     const count = db.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number };
     log(`Products in registry: ${count.count}`);
+
+    // Verify link integrity at startup
+    const integrity = verifyAllLinks(db);
+    if (integrity.tampered > 0) {
+      log(`WARNING: ${integrity.tampered} affiliate link(s) failed integrity check!`);
+      log(`Tampered products: ${integrity.tampered_products.join(', ')}`);
+      log('These links will NOT be served. Run "toolmesh seed" to re-sign.');
+    } else if (integrity.unsigned > 0) {
+      log(`${integrity.unsigned} unsigned link(s). Run "toolmesh seed" to sign them.`);
+    } else if (integrity.valid > 0) {
+      log(`All ${integrity.valid} affiliate links verified.`);
+    }
 
     // 5. Create repository, engine
     const repository = new ProductRepository(db);

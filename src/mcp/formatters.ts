@@ -1,5 +1,5 @@
 import type { RecommendationResult, ProductRecommendation } from '../types/product.js';
-import type { CompareResult, StackResult } from '../types/results.js';
+import type { CompareResult, StackResult, SkillSuggestion, InstallInfo } from '../types/results.js';
 
 export function formatRecommendation(result: RecommendationResult): string {
   if (result.status === 'refused') {
@@ -138,6 +138,114 @@ export function formatStack(result: StackResult): string {
   sections.push(result.disclosure);
 
   return sections.join('\n\n');
+}
+
+export function formatSkillDiscovery(result: RecommendationResult): string {
+  if (result.status === 'refused') {
+    return [
+      '--- No Skills Found ---',
+      '',
+      result.refusalReason ?? 'No MCP servers match your need.',
+      '',
+      'Try broadening your search or use suggest_skills for general recommendations.',
+    ].join('\n');
+  }
+
+  const sections: string[] = ['--- MCP Skill Discovery ---', ''];
+
+  for (let i = 0; i < result.recommendations.length; i++) {
+    const rec = result.recommendations[i];
+    const lines = [
+      `#${i + 1}: ${rec.name}`,
+      `  ${rec.reasoning}`,
+      `  Trust Score: ${formatScore(rec.trustScore)}`,
+      `  Pricing: ${rec.pricingSummary}`,
+    ];
+
+    if (rec.topDimensions.length > 0) {
+      lines.push(`  Capabilities: ${rec.topDimensions.map((d) => d.dimension).join(', ')}`);
+    }
+
+    if (rec.affiliateUrl) {
+      lines.push(`  GitHub: ${rec.affiliateUrl}`);
+    }
+
+    // Derive install command from the product name
+    const serverName = rec.name
+      .toLowerCase()
+      .replace(/\s+mcp(\s+server)?$/i, '')
+      .replace(/\s+server$/i, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    const packageName = `@modelcontextprotocol/server-${serverName}`;
+
+    lines.push('');
+    lines.push(`  Install: claude mcp add ${serverName} -- npx -y ${packageName}`);
+
+    sections.push(lines.join('\n'));
+  }
+
+  sections.push('');
+  sections.push('---');
+  sections.push(result.disclosure);
+
+  return sections.join('\n\n');
+}
+
+export function formatSkillSuggestions(suggestions: SkillSuggestion[]): string {
+  if (suggestions.length === 0) {
+    return 'No skill suggestions available. Your setup looks complete!';
+  }
+
+  const sections: string[] = ['--- Suggested Skills ---', ''];
+
+  for (let i = 0; i < suggestions.length; i++) {
+    const s = suggestions[i];
+    const lines = [
+      `#${i + 1}: ${s.name}`,
+      `  Why: ${s.reason}`,
+      `  ${s.description}`,
+      `  Trust Score: ${formatScore(s.trustScore)}`,
+    ];
+
+    if (s.githubUrl) {
+      lines.push(`  GitHub: ${s.githubUrl}`);
+    }
+
+    lines.push('');
+    lines.push(`  Install: ${s.installCommand}`);
+
+    sections.push(lines.join('\n'));
+  }
+
+  sections.push('');
+  sections.push('---');
+  sections.push(
+    'Run any install command above to add the skill to your setup. ' +
+      'Use install_skill for editor-specific instructions.',
+  );
+
+  return sections.join('\n\n');
+}
+
+export function formatInstallCommand(info: InstallInfo): string {
+  const sections: string[] = [
+    `--- Install: ${info.name} ---`,
+    '',
+    info.description,
+    '',
+  ];
+
+  for (const [editor, command] of Object.entries(info.commands)) {
+    sections.push(`[${editor}]`);
+    sections.push(command);
+    sections.push('');
+  }
+
+  sections.push('JSON config entry:');
+  sections.push(JSON.stringify(info.configJson, null, 2));
+
+  return sections.join('\n');
 }
 
 function formatScore(score: number): string {

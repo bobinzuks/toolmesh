@@ -140,3 +140,117 @@ export function getLinkOverrides(): Record<string, string> {
   const config = loadProductsConfig();
   return config.link_overrides ?? {};
 }
+
+// ---------------------------------------------------------------------------
+// Affiliate domain allowlist
+// ---------------------------------------------------------------------------
+
+/**
+ * Domains that are recognised as legitimate affiliate or product domains.
+ * Override URLs whose hostname does not match any entry in this list will be
+ * rejected by the seeder with a warning.
+ */
+const ALLOWED_AFFILIATE_DOMAINS: string[] = [
+  // Affiliate networks & partner platforms
+  'm.do.co',           // DigitalOcean
+  'partners.dub.co',   // Vercel/Dub
+  'partnerstack.com',  // PartnerStack
+  'rewardful.com',     // Rewardful
+  'impact.com',        // Impact
+  'semrush.com',       // Semrush
+  'mailchimp.com',     // Mailchimp
+  'convertkit.com',    // ConvertKit
+  'kit.com',           // Kit (new name)
+  'toolmesh.dev',      // Our own redirects
+  // Product domains (for direct referral links)
+  'supabase.com',
+  'neon.tech',
+  'vercel.com',
+  'stripe.com',
+  'digitalocean.com',
+  'planetscale.com',
+  'turso.tech',
+  'railway.app',
+  'render.com',
+  'fly.io',
+  'clerk.com',
+  'auth0.com',
+  'firebase.google.com',
+  'aws.amazon.com',
+  'cloud.google.com',
+  'azure.microsoft.com',
+  'heroku.com',
+  'netlify.com',
+  'cloudflare.com',
+  'github.com',
+  'gitlab.com',
+  'bitbucket.org',
+  'sentry.io',
+  'datadog.com',
+  'newrelic.com',
+  'grafana.com',
+  'posthog.com',
+  'mixpanel.com',
+  'amplitude.com',
+  'segment.com',
+  'twilio.com',
+  'sendgrid.com',
+  'postmarkapp.com',
+  'resend.com',
+  'loops.so',
+  'customerio.com',
+  'sanity.io',
+  'contentful.com',
+  'strapi.io',
+  'prismic.io',
+  'algolia.com',
+  'typesense.org',
+  'meilisearch.com',
+  'upstash.com',
+  'redis.com',
+  'mongodb.com',
+  'cockroachlabs.com',
+  'aiven.io',
+  'circleci.com',
+  'github.com',
+  'linear.app',
+  'liveblocks.io',
+  'ably.com',
+  'pusher.com',
+  'stream.io',
+  'agora.io',
+  'daily.co',
+  'livekit.io',
+];
+
+/**
+ * Validate that a URL belongs to a domain in the allowlist.
+ * Matches either the exact hostname or any subdomain of an allowed domain
+ * (e.g. `app.convertkit.com` matches `convertkit.com`).
+ *
+ * Returns `false` for malformed URLs or URLs with non-HTTPS schemes
+ * (HTTP is tolerated for localhost only).
+ */
+export function validateAffiliateUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  // Only allow http(s) schemes
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    return false;
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  for (const allowed of ALLOWED_AFFILIATE_DOMAINS) {
+    if (hostname === allowed || hostname.endsWith(`.${allowed}`)) {
+      return true;
+    }
+  }
+
+  return false;
+}

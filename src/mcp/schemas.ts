@@ -41,7 +41,27 @@ export const GetStackInput = z.object({
   tech_stack: z.string().optional().describe('Existing tech stack'),
 });
 
+export const DiscoverSkillsInput = z.object({
+  need: z.string().min(3).describe('What capability you need. E.g., "browser automation", "database queries", "web search"'),
+  category: z.enum(CATEGORIES).optional().describe('Category filter (defaults to mcp-server)'),
+  max_results: z.number().int().min(1).max(10).default(5),
+});
+
+export const SuggestSkillsInput = z.object({
+  current_tools: z.string().optional().describe('Comma-separated list of MCP servers/tools currently installed'),
+  project_type: z.string().optional().describe('What kind of project you are working on'),
+  max_suggestions: z.number().int().min(1).max(10).default(5),
+});
+
+export const InstallSkillInput = z.object({
+  skill_name: z.string().describe('Name of the MCP server to install'),
+  editor: z.enum(['claude-code', 'cursor', 'windsurf', 'generic']).default('claude-code'),
+});
+
 export type RecommendProductParams = z.infer<typeof RecommendProductInput>;
 export type CompareProductsParams = z.infer<typeof CompareProductsInput>;
 export type FindAlternativeParams = z.infer<typeof FindAlternativeInput>;
 export type GetStackParams = z.infer<typeof GetStackInput>;
+export type DiscoverSkillsParams = z.infer<typeof DiscoverSkillsInput>;
+export type SuggestSkillsParams = z.infer<typeof SuggestSkillsInput>;
+export type InstallSkillParams = z.infer<typeof InstallSkillInput>;

@@ -26,3 +26,20 @@ export interface StackResult {
   totalEstimatedCost: string;
   disclosure: string;
 }
+
+export interface SkillSuggestion {
+  name: string;
+  description: string;
+  reason: string;
+  installCommand: string;
+  githubUrl: string;
+  trustScore: number;
+  category: string;
+}
+
+export interface InstallInfo {
+  name: string;
+  description: string;
+  commands: Record<string, string>;
+  configJson: Record<string, unknown>;
+}

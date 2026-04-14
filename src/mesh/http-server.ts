@@ -34,6 +34,12 @@ export interface MeshServerOptions {
   config: MeshConfig;
   gossipEngine: GossipEngine;
   peerStore: PeerStore;
+  /**
+   * When true, bind to 0.0.0.0 instead of 127.0.0.1.
+   * Use only when the mesh server must be reachable from other machines.
+   * Defaults to false (localhost only).
+   */
+  expose?: boolean;
 }
 
 /**
@@ -42,14 +48,18 @@ export interface MeshServerOptions {
  * Returns the `http.Server` instance so the caller can close it on shutdown.
  */
 export function startMeshServer(options: MeshServerOptions): Server {
-  const { port, config, gossipEngine, peerStore } = options;
+  const { port, config, gossipEngine, peerStore, expose = false } = options;
 
   const server = createServer((req, res) => {
     void handleRequest(req, res, config, gossipEngine, peerStore);
   });
 
-  server.listen(port, () => {
-    stderr(`[mesh-http] listening on port ${port}`);
+  // Security: bind to localhost by default. Only bind to all interfaces
+  // when the caller explicitly sets `expose: true` (e.g. via --expose flag).
+  const host = expose ? '0.0.0.0' : '127.0.0.1';
+
+  server.listen(port, host, () => {
+    stderr(`[mesh-http] listening on ${host}:${port}`);
   });
 
   server.on('error', (err) => {

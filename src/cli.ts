@@ -6,6 +6,7 @@ import { seedDatabase } from './registry/seeder.js';
 import { getDb, closeDb } from './registry/database.js';
 import { ProductRepository } from './registry/repository.js';
 import { ensureProductsJson, loadProductsConfig } from './registry/custom-products.js';
+import { verifyAllLinks } from './registry/link-integrity.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -29,6 +30,7 @@ Commands:
   init              Write MCP config entries for detected editors
   seed              Seed the database with initial products
   status            Show database stats
+  verify            Check all affiliate links for tampering
   products          Create/show products.json for custom products and affiliate links
   serve             Start the MCP server
   dashboard         Start the developer dashboard
@@ -334,6 +336,50 @@ function cmdWellKnown(args: string[]): void {
 }
 
 // ---------------------------------------------------------------------------
+// verify — Check affiliate link integrity
+// ---------------------------------------------------------------------------
+
+function cmdVerify(): void {
+  try {
+    const db = getDb();
+
+    console.log('ToolMesh Link Integrity Check\n');
+
+    const result = verifyAllLinks(db);
+
+    console.log(`  Valid links:      ${result.valid}`);
+    console.log(`  Tampered links:   ${result.tampered}`);
+    console.log(`  Unsigned links:   ${result.unsigned}`);
+
+    if (result.tampered > 0) {
+      console.log('\n  TAMPERED products:');
+      for (const name of result.tampered_products) {
+        console.log(`    - ${name}`);
+      }
+      console.log(
+        '\n  WARNING: Tampered links will NOT be served to users.',
+      );
+      console.log('  Run "toolmesh seed" to re-sign all links.');
+      process.exitCode = 1;
+    } else if (result.unsigned > 0) {
+      console.log(
+        '\n  Some links are unsigned. Run "toolmesh seed" to sign them.',
+      );
+    } else {
+      console.log('\n  All affiliate links verified successfully.');
+    }
+  } catch (err) {
+    console.error(
+      'Verification failed:',
+      err instanceof Error ? err.message : err,
+    );
+    process.exitCode = 1;
+  } finally {
+    closeDb();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -350,6 +396,9 @@ async function main(): Promise<void> {
       break;
     case 'status':
       cmdStatus();
+      break;
+    case 'verify':
+      cmdVerify();
       break;
     case 'serve':
       cmdServe();

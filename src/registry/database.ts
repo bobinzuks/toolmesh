@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { join, dirname } from 'node:path';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, chmodSync, existsSync } from 'node:fs';
 
 let db: Database.Database | null = null;
 
@@ -32,6 +32,7 @@ const SCHEMA_SQL = `
     payout_currency TEXT NOT NULL DEFAULT 'USD',
     cookie_days INTEGER NOT NULL DEFAULT 30,
     approved INTEGER NOT NULL DEFAULT 0,
+    link_signature TEXT,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
   );
 
@@ -62,6 +63,28 @@ function initializeDatabase(dbPath?: string): Database.Database {
 
   instance.exec(SCHEMA_SQL);
   instance.exec(VEC_TABLE_SQL);
+
+  // Migration: add link_signature column if upgrading from an older schema.
+  // ALTER TABLE ... ADD COLUMN throws if the column already exists, which is
+  // harmless on fresh databases where CREATE TABLE already includes it.
+  try {
+    instance.exec('ALTER TABLE affiliate_programs ADD COLUMN link_signature TEXT');
+  } catch {
+    // Column already exists -- nothing to do.
+  }
+
+  // Set database file permissions to owner-only (0600) to prevent other
+  // users on the machine from reading affiliate link data.
+  try {
+    chmodSync(resolvedPath, 0o600);
+    // WAL and SHM files
+    const walPath = resolvedPath + '-wal';
+    const shmPath = resolvedPath + '-shm';
+    if (existsSync(walPath)) chmodSync(walPath, 0o600);
+    if (existsSync(shmPath)) chmodSync(shmPath, 0o600);
+  } catch {
+    // Non-fatal: permissions may not be settable on all filesystems.
+  }
 
   return instance;
 }

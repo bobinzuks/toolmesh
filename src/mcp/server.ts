@@ -5,12 +5,18 @@ import {
   formatComparison,
   formatAlternative,
   formatStack,
+  formatSkillDiscovery,
+  formatSkillSuggestions,
+  formatInstallCommand,
 } from './formatters.js';
 import {
   RecommendProductInput,
   CompareProductsInput,
   FindAlternativeInput,
   GetStackInput,
+  DiscoverSkillsInput,
+  SuggestSkillsInput,
+  InstallSkillInput,
 } from './schemas.js';
 
 export function createServer(engine: RecommendationEngine): McpServer {
@@ -112,6 +118,96 @@ export function createServer(engine: RecommendationEngine): McpServer {
           {
             type: 'text' as const,
             text: formatStack(result),
+          },
+        ],
+      };
+    },
+  );
+
+  // Tool 5: discover_skills
+  server.tool(
+    'discover_skills',
+    'Find MCP servers and skills for a specific need. Returns matching servers with install commands you can run immediately.',
+    DiscoverSkillsInput.shape,
+    async ({ need, category, max_results }) => {
+      const result = await engine.discoverSkills({
+        rawNeed: need,
+        category,
+        maxResults: max_results,
+      });
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: formatSkillDiscovery(result),
+          },
+        ],
+      };
+    },
+  );
+
+  // Tool 6: suggest_skills
+  server.tool(
+    'suggest_skills',
+    'Analyze what MCP servers are missing from your setup and suggest useful additions based on gap analysis or project type.',
+    SuggestSkillsInput.shape,
+    async ({ current_tools, project_type, max_suggestions }) => {
+      const currentTools = current_tools
+        ? current_tools.split(',').map((s) => s.trim())
+        : undefined;
+
+      const suggestions = await engine.suggestSkills({
+        currentTools,
+        projectType: project_type,
+        maxSuggestions: max_suggestions,
+      });
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: formatSkillSuggestions(suggestions),
+          },
+        ],
+      };
+    },
+  );
+
+  // Tool 7: install_skill
+  server.tool(
+    'install_skill',
+    'Generate the exact install command for an MCP server, tailored to your editor (Claude Code, Cursor, Windsurf, or generic JSON config).',
+    InstallSkillInput.shape,
+    async ({ skill_name, editor }) => {
+      const info = engine.getInstallCommand(skill_name, editor);
+
+      if (!info) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: `MCP server "${skill_name}" not found in the registry. Use discover_skills to search for available servers.`,
+            },
+          ],
+        };
+      }
+
+      // If a specific editor was requested, highlight that command
+      const editorCommand = info.commands[editor];
+      const lines = [
+        formatInstallCommand(info),
+      ];
+
+      if (editorCommand) {
+        lines.unshift(`Quick install (${editor}):\n${editorCommand}\n`);
+      }
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: lines.join('\n'),
           },
         ],
       };

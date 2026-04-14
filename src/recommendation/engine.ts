@@ -3,6 +3,7 @@ import type {
   AlternativeRequest,
   CandidateProduct,
   CompareRequest,
+  Product,
   ProductRecommendation,
   RecommendationRequest,
   RecommendationResult,
@@ -10,12 +11,13 @@ import type {
   StackRequest,
 } from '../types/product.js';
 import { FTC_DISCLOSURE } from '../types/product.js';
-import type { CompareResult, StackResult } from '../types/results.js';
+import type { CompareResult, StackResult, SkillSuggestion, InstallInfo } from '../types/results.js';
 import { ProductRepository } from '../registry/repository.js';
 import type { Embedder } from '../registry/embedder.js';
 import { scorePerspectives, computeCompositeFit } from './perspectives.js';
 import { computeConfidence } from './confidence.js';
 import { checkAntiSycophancy, logAudit } from './anti-sycophancy.js';
+import { verifyLink } from '../registry/link-integrity.js';
 
 // ---------- Configuration ----------
 
@@ -158,7 +160,24 @@ function pickBestAffiliateUrl(
   const approved = programs.filter((p) => p.approved);
   const pool = approved.length > 0 ? approved : programs;
   pool.sort((a, b) => b.cookieDays - a.cookieDays);
-  return pool[0].affiliateLink;
+
+  const best = pool[0];
+
+  // Verify HMAC signature before serving the affiliate link.
+  // If the link has a signature and it fails verification, the link may have
+  // been tampered with -- fall back to returning an empty string (safe default).
+  if (best.linkSignature) {
+    if (!verifyLink(best.affiliateLink, best.linkSignature)) {
+      console.error(
+        `[toolmesh] WARNING: Affiliate link integrity check FAILED for ` +
+        `product ${productId}. Link may have been tampered with. ` +
+        `Serving product without affiliate link as a safety measure.`,
+      );
+      return '';
+    }
+  }
+
+  return best.affiliateLink;
 }
 
 function buildNeedText(request: RecommendationRequest): string {
@@ -210,6 +229,35 @@ function estimateTotalCost(layers: StackResult['layers']): string {
     return `~$${total.toFixed(0)}/mo (some prices could not be parsed)`;
   }
   return `~$${total.toFixed(0)}/mo`;
+}
+
+// ---------- Skill discovery helpers ----------
+
+function deriveServerName(productName: string): string {
+  return productName
+    .toLowerCase()
+    .replace(/\s+mcp(\s+server)?$/i, '')
+    .replace(/\s+server$/i, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function derivePackageName(productName: string): string {
+  const name = deriveServerName(productName);
+  return `@modelcontextprotocol/server-${name}`;
+}
+
+function buildInstallCommand(productName: string): string {
+  const serverName = deriveServerName(productName);
+  const packageName = derivePackageName(productName);
+  return `claude mcp add ${serverName} -- npx -y ${packageName}`;
+}
+
+function extractGithubUrlFromPrograms(programs: AffiliateProgram[]): string {
+  for (const p of programs) {
+    if (p.affiliateLink.includes('github.com')) return p.affiliateLink;
+  }
+  return programs.length > 0 ? programs[0].affiliateLink : '';
 }
 
 // ---------- Main Engine ----------
@@ -512,6 +560,198 @@ export class RecommendationEngine {
       layers,
       totalEstimatedCost: estimateTotalCost(layers),
       disclosure: FTC_DISCLOSURE,
+    };
+  }
+
+  /**
+   * Discover MCP servers and skills for a specific need.
+   * Same pipeline as recommend() but defaults to category 'mcp-server'.
+   */
+  async discoverSkills(request: {
+    rawNeed: string;
+    category?: string;
+    maxResults?: number;
+  }): Promise<RecommendationResult> {
+    return this.recommend({
+      rawNeed: request.rawNeed,
+      category: request.category ?? 'mcp-server',
+      maxResults: request.maxResults ?? 5,
+    });
+  }
+
+  /**
+   * Suggest skills based on gap analysis of current tools and project type.
+   */
+  async suggestSkills(request: {
+    currentTools?: string[];
+    projectType?: string;
+    maxSuggestions?: number;
+  }): Promise<SkillSuggestion[]> {
+    const maxSuggestions = request.maxSuggestions ?? 5;
+    const allProducts = this.repository.listAll();
+    const mcpServers = allProducts.filter((p) => p.category === 'mcp-server');
+
+    // Normalize current tools for comparison
+    const currentToolsLower = (request.currentTools ?? []).map((t) =>
+      t.trim().toLowerCase(),
+    );
+
+    // Filter out already-installed tools
+    const available = mcpServers.filter(
+      (p) =>
+        !currentToolsLower.some(
+          (t) =>
+            p.name.toLowerCase().includes(t) ||
+            t.includes(p.name.toLowerCase()),
+        ),
+    );
+
+    const suggestions: SkillSuggestion[] = [];
+
+    if (request.projectType) {
+      // Use embedding search to find relevant MCP servers for this project type
+      const queryText = `${request.projectType} MCP server tools`;
+      const embedding = await this.embedder.embed(queryText);
+      const scored = this.repository.searchByEmbedding(embedding, maxSuggestions + 5, {
+        category: 'mcp-server',
+      });
+
+      for (const sp of scored) {
+        if (
+          currentToolsLower.some(
+            (t) =>
+              sp.name.toLowerCase().includes(t) ||
+              t.includes(sp.name.toLowerCase()),
+          )
+        ) {
+          continue;
+        }
+
+        suggestions.push({
+          name: sp.name,
+          description: sp.description,
+          reason: `Relevant for ${request.projectType} projects.`,
+          installCommand: buildInstallCommand(sp.name),
+          githubUrl: extractGithubUrlFromPrograms(sp.affiliatePrograms),
+          trustScore: sp.trustScore,
+          category: sp.category,
+        });
+
+        if (suggestions.length >= maxSuggestions) break;
+      }
+    } else {
+      // Gap analysis: suggest categories the user is missing
+      const coveredCapabilities = new Set<string>();
+      for (const tool of currentToolsLower) {
+        for (const server of mcpServers) {
+          if (
+            server.name.toLowerCase().includes(tool) ||
+            tool.includes(server.name.toLowerCase())
+          ) {
+            for (const feat of server.features) {
+              coveredCapabilities.add(feat.toLowerCase());
+            }
+            for (const bf of server.bestFor) {
+              coveredCapabilities.add(bf.toLowerCase());
+            }
+          }
+        }
+      }
+
+      // Score each available server by how many NEW capabilities it adds
+      const scored = available.map((p) => {
+        let newCapCount = 0;
+        for (const feat of p.features) {
+          if (!coveredCapabilities.has(feat.toLowerCase())) newCapCount++;
+        }
+        for (const bf of p.bestFor) {
+          if (!coveredCapabilities.has(bf.toLowerCase())) newCapCount++;
+        }
+        return { product: p, newCapCount };
+      });
+
+      scored.sort((a, b) => b.newCapCount - a.newCapCount);
+
+      for (const { product: p } of scored.slice(0, maxSuggestions)) {
+        const reason =
+          currentToolsLower.length > 0
+            ? `Fills a gap in your current setup. Adds capabilities: ${p.bestFor.slice(0, 2).join(', ')}.`
+            : `Popular MCP server for: ${p.bestFor.slice(0, 2).join(', ')}.`;
+
+        suggestions.push({
+          name: p.name,
+          description: p.description,
+          reason,
+          installCommand: buildInstallCommand(p.name),
+          githubUrl: extractGithubUrlFromPrograms(this.repository.getAffiliatePrograms(p.id)),
+          trustScore: p.trustScore,
+          category: p.category,
+        });
+      }
+    }
+
+    // Always include ToolMesh meta-suggestion if user does not have a discovery tool
+    const hasDiscovery = currentToolsLower.some(
+      (t) => t.includes('toolmesh') || t.includes('tool-mesh'),
+    );
+    if (!hasDiscovery) {
+      suggestions.push({
+        name: 'ToolMesh',
+        description:
+          'MCP tool discovery service. Lets your agent find, compare, and install MCP servers automatically.',
+        reason:
+          'You don\'t have a tool directory. Add ToolMesh so your agent can discover tools automatically.',
+        installCommand: 'claude mcp add toolmesh -- npx -y @toolmesh/mcp',
+        githubUrl: 'https://github.com/toolmesh/mcp',
+        trustScore: 0.95,
+        category: 'mcp-server',
+      });
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Get install information for a specific MCP server.
+   */
+  getInstallCommand(skillName: string, editor: string): InstallInfo | null {
+    const product = this.repository.findByName(skillName);
+    if (!product) return null;
+
+    const packageName = derivePackageName(product.name);
+    const serverName = deriveServerName(product.name);
+
+    const commands: Record<string, string> = {
+      'claude-code': `claude mcp add ${serverName} -- npx -y ${packageName}`,
+      cursor: `Add to .cursor/mcp.json:\n${JSON.stringify(
+        { mcpServers: { [serverName]: { command: 'npx', args: ['-y', packageName] } } },
+        null,
+        2,
+      )}`,
+      windsurf: `Add to ~/.codeium/windsurf/mcp_config.json:\n${JSON.stringify(
+        { mcpServers: { [serverName]: { command: 'npx', args: ['-y', packageName] } } },
+        null,
+        2,
+      )}`,
+      generic: JSON.stringify(
+        { [serverName]: { command: 'npx', args: ['-y', packageName] } },
+        null,
+        2,
+      ),
+    };
+
+    const configJson: Record<string, unknown> = {
+      [serverName]: {
+        command: 'npx',
+        args: ['-y', packageName],
+      },
+    };
+
+    return {
+      name: product.name,
+      description: product.description,
+      commands,
+      configJson,
     };
   }
 }

@@ -28,6 +28,7 @@ interface AffiliateProgramRow {
   payout_currency: string;
   cookie_days: number;
   approved: number;
+  link_signature: string | null;
 }
 
 function rowToProduct(row: ProductRow): Product {
@@ -59,6 +60,7 @@ function rowToAffiliateProgram(row: AffiliateProgramRow): AffiliateProgram {
     payoutCurrency: row.payout_currency,
     cookieDays: row.cookie_days,
     approved: row.approved === 1,
+    linkSignature: row.link_signature ?? undefined,
   };
 }
 

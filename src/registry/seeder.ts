@@ -8,7 +8,8 @@ import { SEED_PRODUCTS } from './seed-data.js';
 import { EXTENDED_PRODUCTS_1 } from './seed-data-extended-1.js';
 import { EXTENDED_PRODUCTS_2 } from './seed-data-extended-2.js';
 import { EXTENDED_PRODUCTS_3 } from './seed-data-extended-3.js';
-import { loadProductsConfig, customEntryToProduct, getLinkOverrides } from './custom-products.js';
+import { loadProductsConfig, customEntryToProduct, getLinkOverrides, validateAffiliateUrl } from './custom-products.js';
+import { signAllLinks } from './link-integrity.js';
 
 const ALL_SEED_PRODUCTS = [
   ...SEED_PRODUCTS,
@@ -119,6 +120,16 @@ export async function seedDatabase(
   const overrides = getLinkOverrides();
   for (const [productName, newLink] of Object.entries(overrides)) {
     if (newLink.includes('YOUR_')) continue; // skip unfilled placeholders
+
+    // Validate the override URL against the allowlist before applying
+    if (!validateAffiliateUrl(newLink)) {
+      console.warn(
+        `[toolmesh] WARNING: Rejected link override for "${productName}" — ` +
+        `domain not in allowlist: ${newLink}`,
+      );
+      continue;
+    }
+
     const product = repo.findByName(productName);
     if (product) {
       const programs = repo.getAffiliatePrograms(product.id);
@@ -127,6 +138,9 @@ export async function seedDatabase(
       }
     }
   }
+
+  // Sign all affiliate links with HMAC-SHA256 after seeding/updating
+  signAllLinks(db);
 
   return { inserted, skipped };
 }

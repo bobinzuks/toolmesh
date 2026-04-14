@@ -24,6 +24,8 @@ export interface AffiliateProgram {
   payoutCurrency: string;
   cookieDays: number;
   approved: boolean;
+  /** HMAC-SHA256 signature for link integrity verification (may be absent on legacy data). */
+  linkSignature?: string;
 }
 
 export interface ProductWithEmbedding extends Product {
