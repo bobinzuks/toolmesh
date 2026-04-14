@@ -1,0 +1,6 @@
+[aan] Starting Agent Affiliate Network MCP server...
+[aan] Data directory: /home/bobinzuks/.aan
+[aan] Database initialized.
+[aan] Using hash embedder (AAN_EMBEDDER=hash).
+[aan] Products in registry: 36
+[aan] MCP server running on stdio. Ready for connections.
