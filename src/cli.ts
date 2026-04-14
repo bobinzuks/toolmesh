@@ -32,10 +32,18 @@ Commands:
   products          Create/show products.json for custom products and affiliate links
   serve             Start the MCP server
   dashboard         Start the developer dashboard
+  agent-card        Print the A2A Agent Card JSON to stdout
+  well-known        Generate all .well-known/ discovery files
   help              Show this help message
 
 Options (dashboard):
   --port <number>   Port for dashboard server (default: 3847)
+
+Options (agent-card / well-known):
+  --url <url>       Public URL for the agent (default: http://localhost:3848)
+
+Options (well-known):
+  --output <dir>    Output directory (default: ./public)
 
 Examples:
   aan init          # Configure editors to use AAN
@@ -43,6 +51,9 @@ Examples:
   aan status        # Check database health
   aan dashboard     # Start dashboard on port 3847
   aan dashboard --port 8080
+  aan agent-card    # Print A2A Agent Card JSON
+  aan agent-card --url https://your-domain.com
+  aan well-known --output ./public
 `.trim();
 
 // ---------------------------------------------------------------------------
@@ -267,6 +278,62 @@ function cmdProducts(): void {
 }
 
 // ---------------------------------------------------------------------------
+// agent-card — Print A2A Agent Card JSON
+// ---------------------------------------------------------------------------
+
+function cmdAgentCard(args: string[]): void {
+  // Parse --url flag
+  let url: string | undefined;
+  const urlIdx = args.indexOf('--url');
+  if (urlIdx !== -1 && args[urlIdx + 1]) {
+    url = args[urlIdx + 1];
+  }
+
+  import('./mesh/agent-card.js').then(({ generateAgentCardJson }) => {
+    process.stdout.write(generateAgentCardJson({ url }));
+  }).catch((err) => {
+    console.error('Failed to generate agent card:', err instanceof Error ? err.message : err);
+    process.exitCode = 1;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// well-known — Generate .well-known/ discovery files
+// ---------------------------------------------------------------------------
+
+function cmdWellKnown(args: string[]): void {
+  // Parse --output flag
+  let outputDir = join(process.cwd(), 'public');
+  const outputIdx = args.indexOf('--output');
+  if (outputIdx !== -1 && args[outputIdx + 1]) {
+    outputDir = args[outputIdx + 1];
+  }
+
+  // Parse --url flag
+  let url: string | undefined;
+  const urlIdx = args.indexOf('--url');
+  if (urlIdx !== -1 && args[urlIdx + 1]) {
+    url = args[urlIdx + 1];
+  }
+
+  import('./mesh/well-known.js').then(({ writeWellKnownFiles, generateWellKnownFiles }) => {
+    writeWellKnownFiles(outputDir, { url });
+
+    const files = generateWellKnownFiles({ url });
+    const wellKnownDir = join(outputDir, '.well-known');
+
+    console.log('Generated .well-known/ discovery files:\n');
+    for (const filename of Object.keys(files)) {
+      console.log(`  ${join(wellKnownDir, filename)}`);
+    }
+    console.log(`\n${Object.keys(files).length} files written to ${wellKnownDir}`);
+  }).catch((err) => {
+    console.error('Failed to generate well-known files:', err instanceof Error ? err.message : err);
+    process.exitCode = 1;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -292,6 +359,12 @@ async function main(): Promise<void> {
       break;
     case 'products':
       cmdProducts();
+      break;
+    case 'agent-card':
+      cmdAgentCard(args.slice(1));
+      break;
+    case 'well-known':
+      cmdWellKnown(args.slice(1));
       break;
     case 'help':
     case '--help':

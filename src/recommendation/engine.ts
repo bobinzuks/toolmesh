@@ -19,7 +19,9 @@ import { checkAntiSycophancy, logAudit } from './anti-sycophancy.js';
 
 // ---------- Configuration ----------
 
-const CONFIDENCE_THRESHOLD = parseFloat(process.env.AAN_CONFIDENCE_THRESHOLD ?? '0.15');
+function getConfidenceThreshold(): number {
+  return parseFloat(process.env.AAN_CONFIDENCE_THRESHOLD ?? '0.15');
+}
 const DEFAULT_K = 10;
 const DEFAULT_MAX_RESULTS = 3;
 
@@ -258,7 +260,7 @@ export class RecommendationEngine {
         disclosure: FTC_DISCLOSURE,
         queryContext: {
           totalCandidatesEvaluated: 0,
-          confidenceThreshold: CONFIDENCE_THRESHOLD,
+          confidenceThreshold: getConfidenceThreshold(),
           candidatesBelowThreshold: 0,
         },
         refusalReason: 'No products found matching your criteria.',
@@ -284,7 +286,7 @@ export class RecommendationEngine {
     });
 
     const aboveThreshold = withConfidence.filter(
-      (item) => item.confidence >= CONFIDENCE_THRESHOLD,
+      (item) => item.confidence >= getConfidenceThreshold(),
     );
     const belowThreshold = withConfidence.length - aboveThreshold.length;
 
@@ -295,12 +297,12 @@ export class RecommendationEngine {
         disclosure: FTC_DISCLOSURE,
         queryContext: {
           totalCandidatesEvaluated: candidates.length,
-          confidenceThreshold: CONFIDENCE_THRESHOLD,
+          confidenceThreshold: getConfidenceThreshold(),
           candidatesBelowThreshold: belowThreshold,
         },
         refusalReason:
           `Found ${candidates.length} candidates but none met the ` +
-          `${(CONFIDENCE_THRESHOLD * 100).toFixed(0)}% confidence threshold. ` +
+          `${(getConfidenceThreshold() * 100).toFixed(0)}% confidence threshold. ` +
           `Try broadening your requirements.`,
       };
     }
@@ -365,7 +367,7 @@ export class RecommendationEngine {
       disclosure: FTC_DISCLOSURE,
       queryContext: {
         totalCandidatesEvaluated: candidates.length,
-        confidenceThreshold: CONFIDENCE_THRESHOLD,
+        confidenceThreshold: getConfidenceThreshold(),
         candidatesBelowThreshold: belowThreshold,
       },
     };

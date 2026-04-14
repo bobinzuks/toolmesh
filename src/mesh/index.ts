@@ -11,3 +11,4 @@ export * from './peer-store.js';
 export * from './gossip-engine.js';
 export * from './trust-engine.js';
 export * from './skill-router.js';
+export * from './http-server.js';

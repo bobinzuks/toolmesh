@@ -1,0 +1,21 @@
+{
+  "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
+  "name": "io.github.bobinzuks/agent-affiliate-network",
+  "title": "Agent Affiliate Network",
+  "description": "AI agents recommend SaaS products with commission-blind scoring. Affiliate links attached post-ranking. 36 products, 13-perspective matching, anti-sycophancy gate.",
+  "repository": {
+    "url": "https://github.com/bobinzuks/agent-affiliate-network",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@aan/mcp",
+      "version": "0.1.0",
+      "transport": [
+        { "type": "stdio" }
+      ]
+    }
+  ]
+}

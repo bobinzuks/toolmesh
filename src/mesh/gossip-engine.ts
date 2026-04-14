@@ -3,9 +3,9 @@
  *
  * SWIM-like gossip protocol for peer discovery and propagation.
  *
- * For MVP the network layer is SIMULATED -- sendMessage() and fetchCard()
- * log to stderr what they would transmit over the wire.  All gossip logic
- * (peer selection, delta exchange, failure detection) is real.
+ * Network calls use the Node.js built-in fetch() with AbortSignal.timeout
+ * for bounded request durations.  All failures are caught and logged to
+ * stderr -- network errors never crash the process.
  */
 
 import type { Embedder } from '../registry/embedder.js';
@@ -93,10 +93,10 @@ export class GossipEngine {
   /**
    * Discover a new peer by URL.
    *
-   * 1. Fetch their agent card (stub).
+   * 1. Fetch their agent card via HTTP.
    * 2. Embed each of their skills.
    * 3. Add to the peer store.
-   * 4. Announce ourselves to them (stub).
+   * 4. Announce ourselves to them via HTTP.
    */
   async discoverPeer(url: string): Promise<void> {
     // Don't discover ourselves.
@@ -240,75 +240,89 @@ export class GossipEngine {
     }, delay);
   }
 
-  // ---------- Stub network layer (MVP) --------------------------------------
+  // ---------- Network layer --------------------------------------------------
 
   /**
-   * STUB: Fetch an agent card from a remote peer.
-   *
-   * In production this would be an HTTP GET to `${url}/.well-known/agent.json`.
-   * For MVP we return a synthetic card so the gossip logic can be exercised.
+   * Fetch an agent card from a remote peer via HTTP GET.
    */
   private async fetchAgentCard(url: string): Promise<AgentCard | null> {
-    stderr(`[net/stub] GET ${url}/.well-known/agent.json`);
-
-    // Simulate network latency.
-    await delay(5);
-
-    // Return a plausible synthetic card.
-    return {
-      name: `agent-${urlToSlug(url)}`,
-      description: `Remote agent at ${url}`,
-      version: '1.0.0',
-      url,
-      skills: [
-        {
-          id: `${urlToSlug(url)}-default`,
-          name: 'general',
-          description: 'General purpose agent skill',
-          tags: ['general'],
+    try {
+      const cardUrl = new URL('/.well-known/agent-card.json', url).toString();
+      stderr(`[net] GET ${cardUrl}`);
+      const res = await fetch(cardUrl, {
+        signal: AbortSignal.timeout(5000),
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'AAN-Mesh/0.1.0',
         },
-      ],
-    };
+      });
+      if (!res.ok) {
+        stderr(`[net] GET ${cardUrl} failed: ${res.status} ${res.statusText}`);
+        return null;
+      }
+      return await res.json() as AgentCard;
+    } catch (err) {
+      stderr(`[net] fetchAgentCard(${url}) error: ${String(err)}`);
+      return null;
+    }
   }
 
   /**
-   * STUB: Send a gossip message to a remote peer.
-   * Returns true if the "send" succeeds.
+   * Send a gossip message to a remote peer via HTTP POST.
+   * Returns true if the peer acknowledged the message.
    */
-  private async sendGossip(targetUrl: string, message: GossipMessage): Promise<boolean> {
-    stderr(`[net/stub] POST ${targetUrl}/a2a/gossip  ` +
-           `type=${message.type} peers=${message.peers.length}`);
-    await delay(5);
-    // Simulate 90% success rate.
-    return Math.random() < 0.9;
+  private async sendGossip(peerUrl: string, message: GossipMessage): Promise<boolean> {
+    try {
+      const gossipUrl = new URL('/.well-known/mesh-gossip', peerUrl).toString();
+      stderr(`[net] POST ${gossipUrl} type=${message.type} peers=${message.peers.length}`);
+      const res = await fetch(gossipUrl, {
+        method: 'POST',
+        signal: AbortSignal.timeout(5000),
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'AAN-Mesh/0.1.0',
+        },
+        body: JSON.stringify(message),
+      });
+      if (!res.ok) {
+        stderr(`[net] POST ${gossipUrl} failed: ${res.status} ${res.statusText}`);
+      }
+      return res.ok;
+    } catch (err) {
+      stderr(`[net] sendGossip(${peerUrl}) error: ${String(err)}`);
+      return false;
+    }
   }
 
   /**
-   * STUB: Announce ourselves to a remote peer.
+   * Announce ourselves to a remote peer via HTTP POST.
+   * Returns true if the peer acknowledged the announcement.
    */
-  private async sendAnnouncement(targetUrl: string): Promise<void> {
-    const message: GossipMessage = {
-      type: 'peer_announcement',
-      sender: this.config.selfUrl,
-      timestamp: new Date().toISOString(),
-      peers: [
-        {
-          url: this.config.selfUrl,
-          skillsSummary: this.config.selfCard.skills.map((s) => s.name),
-          skillsHash: '00000000',
-          lastSeen: new Date().toISOString(),
-          generation: 1,
-          trustScore: 1.0,
+  private async sendAnnouncement(peerUrl: string): Promise<boolean> {
+    try {
+      const announceUrl = new URL('/.well-known/mesh-announce', peerUrl).toString();
+      stderr(`[net] POST ${announceUrl}`);
+      const res = await fetch(announceUrl, {
+        method: 'POST',
+        signal: AbortSignal.timeout(5000),
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'AAN-Mesh/0.1.0',
         },
-      ],
-    };
-
-    stderr(`[net/stub] POST ${targetUrl}/a2a/gossip  type=peer_announcement`);
-    await delay(5);
-
-    // In production we would check the response and handle errors.
-    // For MVP we just log it.
-    void message;
+        body: JSON.stringify({
+          type: 'peer_announcement',
+          sender: this.config.selfUrl,
+          card: this.config.selfCard,
+        }),
+      });
+      if (!res.ok) {
+        stderr(`[net] POST ${announceUrl} failed: ${res.status} ${res.statusText}`);
+      }
+      return res.ok;
+    } catch (err) {
+      stderr(`[net] sendAnnouncement(${peerUrl}) error: ${String(err)}`);
+      return false;
+    }
   }
 }
 
@@ -389,17 +403,4 @@ export function createAanAgentCard(config: { url: string; version: string }): Ag
 
 function stderr(msg: string): void {
   process.stderr.write(msg + '\n');
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function urlToSlug(url: string): string {
-  return url
-    .replace(/^https?:\/\//, '')
-    .replace(/[^a-z0-9]/gi, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 32);
 }

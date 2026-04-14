@@ -29,16 +29,20 @@
     "recommendations",
     "a2a",
     "model-context-protocol",
-    "saas"
+    "saas",
+    "mcp-server",
+    "claude",
+    "llm",
+    "ai-tools"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropic/agent-affiliate-network.git"
+    "url": "https://github.com/bobinzuks/agent-affiliate-network.git"
   },
-  "homepage": "https://github.com/anthropic/agent-affiliate-network#readme",
+  "homepage": "https://github.com/bobinzuks/agent-affiliate-network#readme",
   "bugs": {
-    "url": "https://github.com/anthropic/agent-affiliate-network/issues"
+    "url": "https://github.com/bobinzuks/agent-affiliate-network/issues"
   },
   "publishConfig": {
     "access": "public"
