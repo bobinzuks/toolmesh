@@ -1,0 +1,43 @@
+{
+  "name": "@aan/mcp",
+  "version": "0.1.0",
+  "description": "Agent Affiliate Network — AI agents recommend SaaS products, you earn commissions",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "aan": "dist/cli.js",
+    "aan-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "seed": "node dist/seed.js",
+    "init": "node dist/cli.js init",
+    "test": "node --import tsx --test src/**/*.test.ts"
+  },
+  "keywords": [
+    "mcp",
+    "affiliate",
+    "agent",
+    "ai",
+    "recommendations",
+    "a2a"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "better-sqlite3": "^11.0.0",
+    "sqlite-vec": "^0.1.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

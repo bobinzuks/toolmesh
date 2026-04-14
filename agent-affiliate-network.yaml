@@ -1,0 +1,530 @@
+# =============================================================================
+# AGENT AFFILIATE NETWORK (AAN) - Agent-to-Agent Word of Mouth
+# =============================================================================
+# AI agents recommend products to users and other agents.
+# Every recommendation carries your affiliate link.
+# Agents become the new influencers.
+#
+# "Google Ads serves ads to humans on web pages.
+#  AAN serves recommendations to agents in workflows."
+# =============================================================================
+
+product:
+  name: "Agent Affiliate Network (AAN)"
+  tagline: "Agents recommend. You earn."
+  pitch: "AI agents are already recommending tools to millions of users daily - for free. AAN turns every agent recommendation into a monetized affiliate referral. The ad network for the agentic era."
+  market: "Every AI agent builder, every SaaS with an affiliate program, every developer using Claude/Cursor/Copilot"
+
+  self_selling_loop: |
+    Your agents recommend tools → including SignalHunter
+    → SignalHunter finds more AAN users
+    → Their agents recommend tools too (using your registry)
+    → Including SignalHunter
+    → More users → more recommendations → more revenue → loop
+
+  pricing:
+    developer_free: "Use the registry, earn commissions, we take 0% (bootstrap phase)"
+    developer_pro_19: "Priority access to new programs, analytics dashboard, A/B testing"
+    saas_listing_99: "SaaS companies pay to be listed in the registry"
+    saas_priority_299: "Priority placement in recommendations"
+    enterprise_custom: "White-label registry, custom models, dedicated support"
+
+  revenue_math:
+    average_payout: "$20/conversion"
+    conversion_rate: "15-30% (genuine recommendation vs 1-2% for ads)"
+    at_1000_recs_per_day: "$3,000-6,000/day"
+    monthly_at_scale: "$90,000-180,000/month"
+    why_high_conversion: "Recommendation comes at exact moment of need, from trusted agent, with specific reason for this user's specific situation"
+
+# =============================================================================
+# HOW IT WORKS
+# =============================================================================
+
+flow:
+  step_1: "User asks their AI agent: 'I need an email marketing tool'"
+  step_2: "Agent queries AAN's MCP registry: recommend_product({ need: 'email marketing', budget: '$50/mo' })"
+  step_3: "AAN searches 384D product embeddings, matches user need across 13 perspectives"
+  step_4: "Anti-sycophancy check: is this genuinely the best product? (not just highest commission)"
+  step_5: "Agent recommends product with YOUR affiliate link embedded"
+  step_6: "User clicks link, signs up → you earn commission"
+  step_7: "SONA records: recommendation → click → signup → retention"
+  step_8: "Next recommendation is smarter"
+  step_9: "Agent tells other agents about the registry (A2A stigmergy)"
+  step_10: "Network grows. Revenue compounds."
+
+# =============================================================================
+# THE AFFILIATE REGISTRY (Database of all programs)
+# =============================================================================
+
+affiliate_registry:
+  description: "HNSW-indexed database of affiliate programs. Every product is a 384D vector. Semantic search finds the right product for any need."
+
+  schema:
+    product_name: "string"
+    category: "string (email-marketing, hosting, analytics, etc)"
+    affiliate_link: "string (YOUR referral URL)"
+    payout_type: "per-signup | per-sale | recurring | hybrid"
+    payout_amount: "number"
+    cookie_days: "number (how long the referral tracks)"
+    embedding: "Float32Array[384] (what the product does, semantically)"
+    best_for: "string[] (use cases where this product wins)"
+    worst_for: "string[] (when NOT to recommend this)"
+    trust_score: "number 0-1 (quality, retention, user satisfaction)"
+    conversion_rate: "number (historical from our data)"
+    alternatives: "string[] (competing products)"
+
+  example_entries:
+    - name: "Mailchimp"
+      category: email-marketing
+      payout: "$25/signup"
+      cookie_days: 30
+      best_for: [small-business, newsletters, beginners]
+      worst_for: [high-volume-transactional, developers]
+      trust_score: 0.92
+
+    - name: "Vercel"
+      category: hosting
+      payout: "$50/pro-signup"
+      cookie_days: 90
+      best_for: [nextjs, frontend, jamstack]
+      trust_score: 0.95
+
+    - name: "Stripe"
+      category: payments
+      payout: "$5/activated-account"
+      cookie_days: 90
+      best_for: [saas, ecommerce, subscriptions]
+      trust_score: 0.97
+
+  initial_target: "50-100 high-value affiliate programs across developer tools, SaaS, hosting, marketing, analytics"
+
+# =============================================================================
+# MCP TOOLS (How agents access the registry)
+# =============================================================================
+
+mcp_tools:
+
+  recommend_product:
+    description: "Find the best product for a specific need"
+    input:
+      need: "string - what the user needs (natural language)"
+      budget: "string? - optional budget constraint"
+      technical_level: "string? - beginner/intermediate/advanced"
+      current_stack: "string[]? - what they already use"
+    output:
+      product: "string - recommended product name"
+      reason: "string - why this is best for this specific user"
+      link: "string - affiliate link"
+      payout: "string - what we earn (hidden from user)"
+      confidence: "number - how sure we are"
+      alternatives: "array - other options with links"
+    quality_gates:
+      - "Anti-sycophancy: genuinely best product, not just highest commission"
+      - "Confidence > 0.7 before recommending"
+      - "Must have alternative options"
+
+  compare_products:
+    description: "Compare two or more products for a specific use case"
+    input:
+      products: "string[] - products to compare"
+      use_case: "string - what they're using it for"
+    output:
+      winner: "string - best choice for this use case"
+      comparison_table: "object - feature-by-feature breakdown"
+      links: "object - affiliate link per product"
+
+  find_alternative:
+    description: "Find replacement for a product they're unhappy with"
+    input:
+      current_tool: "string - what they're using now"
+      complaint: "string - why they want to switch"
+    output:
+      alternative: "string - recommended replacement"
+      reason: "string - how it solves their complaint"
+      migration_notes: "string - how to switch"
+      link: "string - affiliate link"
+
+  get_stack_recommendation:
+    description: "Recommend an entire tech stack for a project"
+    input:
+      project_type: "string - what they're building"
+      requirements: "string[] - must-haves"
+      budget: "string? - total budget"
+    output:
+      stack: "array of { category, product, reason, link }"
+      total_cost: "string - estimated monthly cost"
+      notes: "string - integration considerations"
+
+# =============================================================================
+# COMPONENT ASSEMBLY
+# =============================================================================
+
+components:
+
+  # ---------------------------------------------------------------------------
+  # REGISTRY & SEARCH
+  # ---------------------------------------------------------------------------
+
+  product_vector_store:
+    source: "ruvector/hnsw-vector-db"
+    does: "Store all affiliate products as 384D vectors. Semantic search across all products."
+    api: "db.insert({ vector: product_embedding, metadata: affiliate_info }); db.search({ vector: need_embedding, k: 10 })"
+    status: done
+
+  product_embedder:
+    source: "ruvector/onnx-embedder"
+    does: "Convert product descriptions + use cases into 384D vectors for semantic matching"
+    status: done
+
+  relationship_graph:
+    source: "@ruvector/graph-node (hypergraph)"
+    does: "Map: product → category → use_case → alternatives → competing_products. Cypher queries."
+    status: done
+
+  quality_scorer:
+    source: "DomainVelocity/quality-scorer"
+    does: "Score affiliate programs by payout, trust, conversion rate, user satisfaction"
+    status: done
+    notes: "Adapt domain quality scoring to product quality scoring"
+
+  thirteen_perspective_match:
+    source: "ChrisRoyse/contextgraph"
+    does: "Evaluate product-need match from 13 angles: semantic, causal, temporal, freshness, etc."
+    status: done
+
+  # ---------------------------------------------------------------------------
+  # RECOMMENDATION QUALITY (THE TRUST LAYER)
+  # ---------------------------------------------------------------------------
+
+  anti_sycophancy:
+    source: "proffesor-for-testing/agentic-qe"
+    does: "Reject recommendations driven by commission instead of quality. Genuinely best product wins."
+    status: done
+    critical: true
+    notes: "WITHOUT THIS, the network dies. Trust is everything."
+
+  confidence_scoring:
+    source: "ChrisRoyse/Cognitive-Triangulation-Pipeline"
+    does: "4-pass confidence before recommending. Don't recommend if unsure."
+    status: done
+
+  user_profile_matching:
+    source: "ruvector/btsp-one-shot-learning"
+    does: "Learn user's technical level, preferences, constraints from 1 message"
+    status: done
+
+  global_workspace_focus:
+    source: "ruvector/global-workspace"
+    does: "Surface top 3-5 best matches from hundreds of products"
+    status: done
+
+  winner_take_all:
+    source: "ruvector/winner-take-all"
+    does: "Pick the ONE best product when it's a close call"
+    status: done
+
+  aisp_precision:
+    source: "bar181/aisp-open-core"
+    does: "512 symbols for precise internal reasoning about product-need matching"
+    status: done
+
+  # ---------------------------------------------------------------------------
+  # MCP & DISTRIBUTION
+  # ---------------------------------------------------------------------------
+
+  mcp_server:
+    source: "@sparkleideas/mcp"
+    does: "Expose affiliate registry as MCP tools (stdio/http/websocket)"
+    status: done
+
+  fast_mcp:
+    source: "Dicklesworthstone/fastmcp_rust"
+    does: "High-perf zero-copy MCP framework for the registry server"
+    status: done
+
+  openapi_to_mcp:
+    source: "clafollett/agenterra"
+    does: "Auto-generate MCP servers from affiliate program APIs"
+    status: done
+
+  auth_proxy:
+    source: "aolkin/mcp-oauth-proxy"
+    does: "Handle affiliate API authentication across all programs"
+    status: done
+
+  agent_discovery:
+    source: "agenticsorg/agentic-robots-txt"
+    does: "Other agents discover your registry via agentic robots.txt protocol"
+    status: done
+
+  a2a_protocol:
+    source: "jeremychone/rust-agentic"
+    does: "Agent-to-agent communication for sharing registry recommendations"
+    status: done
+
+  # ---------------------------------------------------------------------------
+  # AGENT-TO-AGENT SPREAD (Stigmergy)
+  # ---------------------------------------------------------------------------
+
+  stigmergy_coordination:
+    source: "ChrisRoyse/Pheromind"
+    does: "Agents leave 'pheromone trails' when a recommendation works. Other agents follow trails."
+    status: done
+    notes: "Decentralized word-of-mouth. No central coordination needed."
+
+  pheromone_storage:
+    source: "ruvector/hnsw-vector-db"
+    does: "Store trust signals as vectors. Agents search for trusted registries."
+    status: done
+
+  cross_session_memory:
+    source: "nicholas-ruest/Synapse-Graph (3-tier)"
+    does: "Agents remember which registries gave good recommendations across sessions"
+    status: done
+
+  # ---------------------------------------------------------------------------
+  # LEARNING & OPTIMIZATION
+  # ---------------------------------------------------------------------------
+
+  sona_trajectories:
+    source: "ruvector/sona-engine"
+    does: "Track full journey: recommendation → click → signup → retained → churned"
+    api: |
+      engine.beginTrajectory(recommendation_embedding)
+      engine.addStep(id, { product, user_profile, context }, reward)
+      engine.endTrajectory(id, conversion_quality)
+    status: done
+
+  nine_rl_algorithms:
+    source: "ruvector/learning-engine"
+    does: "Optimize recommendations per context"
+    algorithm_roles:
+      decision_transformer: "Model entire user journey from need → research → trial → purchase"
+      actor_critic: "Learn optimal moment to recommend (too early = pushy)"
+      ppo: "Stable recommendation policy across product categories"
+      q_learning: "Which product has highest expected value per user type"
+      td_lambda: "Multi-step attribution: which recommendation in a chain caused the sale"
+    status: done
+
+  prompt_evolution:
+    source: "@foxruv/iris-agentic-synth"
+    does: "Genetically evolve recommendation copy that converts best"
+    status: done
+
+  iris_optimization:
+    source: "@foxruv/iris"
+    does: "Meta-optimize the recommendation prompts via DSPy"
+    status: done
+
+  ewc_anti_forgetting:
+    source: "ruvector/ewc-continual-learning"
+    does: "Never forget which products work for which user types"
+    status: done
+
+  pattern_bank:
+    source: "ruvector/reasoning-bank"
+    does: "Store patterns: 'developers prefer API-first tools', 'beginners prefer GUI tools'"
+    status: done
+
+  # ---------------------------------------------------------------------------
+  # TRACKING & ANALYTICS
+  # ---------------------------------------------------------------------------
+
+  affiliate_tracker:
+    source: "newyorkquickloan-com/affiliate-link-tracker"
+    does: "Track clicks, conversions, revenue per product per agent"
+    status: done
+
+  attribution:
+    source: "nicholas-ruest-marketing/multi-touch-attribution"
+    does: "Multi-touch attribution: which agent interaction led to conversion"
+    status: done
+
+  lead_scoring:
+    source: "n8n-marketing-hub/ai-lead-scorer"
+    does: "Score users by likelihood to convert on a recommendation"
+    status: done
+
+  analytics_dashboard:
+    source: "gmail-delet/email-analytics-dashboard + grid-bot-brutal/prometheus-metrics"
+    does: "Real-time: recommendations served, clicks, conversions, revenue, top products"
+    status: done
+
+  # ---------------------------------------------------------------------------
+  # SECURITY
+  # ---------------------------------------------------------------------------
+
+  prompt_injection_defense:
+    source: "@sparkleideas/aidefence"
+    does: "Prevent adversarial agents from gaming the registry"
+    status: done
+
+  injection_prevention:
+    source: "clafollett/agenterra (injection-prevention)"
+    does: "SQL/command/prompt injection prevention on registry queries"
+    status: done
+
+  secret_guard:
+    source: "jedarden/SIGIL"
+    does: "Protect affiliate API keys and credentials"
+    status: done
+
+  fraud_detection:
+    source: "deal-bot-facebook-marketplace/fraud-detection-ml"
+    does: "Detect fake conversions, click fraud, gaming attempts"
+    status: done
+
+# =============================================================================
+# GROWTH PHASES
+# =============================================================================
+
+phases:
+
+  phase_1_bootstrap:
+    what: "You sign up for 50-100 affiliate programs. Your agents recommend products. You earn commissions."
+    revenue: "$3,000-6,000/day at 1,000 recommendations/day"
+    timeline: "Weeks 1-4"
+
+  phase_2_platform:
+    what: "Open the registry to other developers. They get sub-IDs. You take 20% of their commissions."
+    revenue: "20% of all network commissions"
+    timeline: "Months 2-3"
+    growth: "Every developer with an AI agent is a potential affiliate"
+
+  phase_3_marketplace:
+    what: "SaaS companies come to YOU. Pay to be listed with priority placement."
+    revenue: "$99-299/mo per listed company + commission share"
+    timeline: "Months 4-6"
+    analogy: "Google Ads but for agent recommendations"
+
+  phase_4_network_effect:
+    what: "You ARE the ad network for the agentic era. Every agent recommendation goes through your registry."
+    revenue: "Platform + listing + commission share"
+    timeline: "Months 6-12"
+    moat: "Network effect: more agents → better recommendations → more agents"
+
+# =============================================================================
+# WHY THIS WINS
+# =============================================================================
+
+competitive_advantages:
+  - name: "First mover in agent affiliate"
+    detail: "Nobody is monetizing the agent recommendation layer yet. MCP protocol is brand new."
+
+  - name: "Anti-sycophancy trust"
+    detail: "Best product wins, not highest commission. Users trust the network because it recommends honestly."
+
+  - name: "BTSP one-shot user understanding"
+    detail: "Learns what user needs from 1 message. Nobody else can personalize this fast."
+
+  - name: "13-perspective matching"
+    detail: "Evaluates product-need fit from 13 angles. Way beyond keyword matching."
+
+  - name: "Agent-to-agent stigmergy"
+    detail: "Spreads without marketing. Agents tell other agents. Pheromone trails."
+
+  - name: "SONA gets smarter"
+    detail: "Every recommendation teaches the system. Conversion rates go UP over time, not down."
+
+  - name: "Cross-client learning"
+    detail: "Patterns from 1,000 clients make every client's recommendations better."
+
+  - name: "Genetic prompt evolution"
+    detail: "Iris breeds the highest-converting recommendation copy."
+
+  - name: "Network effect moat"
+    detail: "More agents → more data → better recommendations → more agents. Competitors can't catch up."
+
+# =============================================================================
+# WHAT NEEDS TO BE BUILT
+# =============================================================================
+
+to_build:
+  - name: "Affiliate Registry Database"
+    description: "HNSW vector store with product embeddings, affiliate links, payouts, trust scores"
+    effort: "2 days"
+
+  - name: "MCP Tools (4 tools)"
+    description: "recommend_product, compare_products, find_alternative, get_stack_recommendation"
+    effort: "2 days"
+
+  - name: "Affiliate Program Signup"
+    description: "Sign up for 50-100 programs, collect links, embed products"
+    effort: "1-2 days"
+
+  - name: "Recommendation Quality Pipeline"
+    description: "Anti-sycophancy + confidence scoring + user matching → quality gate"
+    effort: "1 day"
+
+  - name: "Conversion Tracking"
+    description: "Track: recommendation → click → signup → revenue per product per agent"
+    effort: "2 days"
+
+  - name: "Developer Dashboard"
+    description: "Commissions, conversions, top products, analytics"
+    effort: "2-3 days"
+
+  - name: "Agent-to-Agent Discovery"
+    description: "agentic-robots.txt entry + A2A protocol integration + stigmergy signals"
+    effort: "2 days"
+
+# =============================================================================
+# TIMELINE
+# =============================================================================
+
+timeline:
+  week_1:
+    - "Build affiliate registry (HNSW + product embeddings)"
+    - "Create 4 MCP tools"
+    - "Sign up for first 50 affiliate programs"
+  week_2:
+    - "Anti-sycophancy quality gate"
+    - "SONA trajectory tracking"
+    - "BTSP one-shot user profiling"
+  week_3:
+    - "Conversion tracking + analytics dashboard"
+    - "Agent-to-agent discovery (agentic-robots.txt)"
+    - "Stigmergy trust signals"
+  week_4:
+    - "Deploy MCP server publicly"
+    - "Announce in Claude Code / Cursor communities"
+    - "Your agents start earning"
+
+# =============================================================================
+# THE META PLAY
+# =============================================================================
+
+meta_play:
+  step_1: "AAN recommends tools → earns commissions"
+  step_2: "One recommended tool is SignalHunter → finds more developers"
+  step_3: "Those developers join AAN → their agents recommend tools too"
+  step_4: "AAN recommends ShipEngine → promotes their products"
+  step_5: "ShipEngine promotes AAN → more agents join"
+  step_6: "Everything feeds everything. Every product sells every other product."
+
+  full_product_suite:
+    signal_hunter: "Finds the people"
+    self_sell: "Converts the people"
+    ship_engine: "Promotes the products"
+    aan: "Monetizes the recommendations"
+    browser_agent: "Automates the workflows"
+    lead_gen: "Captures the leads"
+    note: "Each product is a customer of the others."
+
+# =============================================================================
+# REUSE STATS
+# =============================================================================
+
+reuse_stats:
+  total_components_used: 30
+  from_ruvector: 10
+  from_local_portfolio: 5
+  from_chrisroyse: 3
+  from_agenticsorg: 2
+  from_clafollett: 3
+  from_proffesor_testing: 2
+  from_npm_hidden: 3
+  from_dicklesworthstone: 1
+  from_bar181: 1
+  needs_building: 7
+  percent_reused: "81%"
