@@ -14,10 +14,35 @@ export interface Embedder {
  * Uses a deterministic hash to map each word to vector positions and accumulates
  * weighted contributions. Not truly semantic, but gives us consistent,
  * content-dependent vectors for MVP search.
+ *
+ * Zero-dependency fallback -- always available.
  */
 export class HashEmbedder implements Embedder {
   async embed(text: string): Promise<Float32Array> {
     return embedText(text);
+  }
+}
+
+/**
+ * Real semantic embedder using all-MiniLM-L6-v2 via @huggingface/transformers.
+ * Produces 384-dimensional normalized embeddings that capture true semantic meaning.
+ *
+ * The model is loaded lazily on first call (~22 MB quantized download).
+ * Subsequent calls reuse the loaded pipeline.
+ */
+export class TransformerEmbedder implements Embedder {
+  private pipeline: any = null;
+
+  async embed(text: string): Promise<Float32Array> {
+    if (!this.pipeline) {
+      const { pipeline } = await import('@huggingface/transformers');
+      this.pipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+        dtype: 'q8',
+      });
+    }
+
+    const output = await this.pipeline(text, { pooling: 'mean', normalize: true });
+    return new Float32Array(output.data);
   }
 }
 

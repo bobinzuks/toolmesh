@@ -18,12 +18,12 @@ let engine: RecommendationEngine;
 let tmpDir: string;
 let dbPath: string;
 
-before(() => {
+before(async () => {
   tmpDir = mkdtempSync(join(tmpdir(), 'aan-test-'));
   dbPath = join(tmpDir, 'test-registry.db');
 
   const db = resetDb(dbPath);
-  seedDatabase(dbPath);
+  await seedDatabase(dbPath);
 
   const repo = new ProductRepository(db);
   const embedder = new HashEmbedder();

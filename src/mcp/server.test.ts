@@ -20,13 +20,13 @@ let tmpDbDir: string;
 let tmpDbPath: string;
 let engine: RecommendationEngine;
 
-before(() => {
+before(async () => {
   tmpDbDir = join(tmpdir(), `aan-server-test-${crypto.randomUUID()}`);
   mkdirSync(tmpDbDir, { recursive: true });
   tmpDbPath = join(tmpDbDir, 'test-registry.db');
 
   const db = resetDb(tmpDbPath);
-  seedDatabase(tmpDbPath);
+  await seedDatabase(tmpDbPath);
 
   const embedder = new HashEmbedder();
   const repository = new ProductRepository(db);

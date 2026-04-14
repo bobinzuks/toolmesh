@@ -8,12 +8,17 @@
     "aan": "dist/cli.js",
     "aan-mcp": "dist/index.js"
   },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/dashboard/ui.html dist/dashboard/ui.html",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "seed": "node dist/seed.js",
     "init": "node dist/cli.js init",
+    "prepublishOnly": "npm run build",
     "test": "node --import tsx --test src/**/*.test.ts"
   },
   "keywords": [
@@ -22,10 +27,24 @@
     "agent",
     "ai",
     "recommendations",
-    "a2a"
+    "a2a",
+    "model-context-protocol",
+    "saas"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropic/agent-affiliate-network.git"
+  },
+  "homepage": "https://github.com/anthropic/agent-affiliate-network#readme",
+  "bugs": {
+    "url": "https://github.com/anthropic/agent-affiliate-network/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
+    "@huggingface/transformers": "^4.0.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^11.0.0",
     "sqlite-vec": "^0.1.0",

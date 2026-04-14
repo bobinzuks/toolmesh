@@ -3,13 +3,37 @@ import type { Product, AffiliateProgram } from '../types/product.js';
 import { getDb } from './database.js';
 import { ProductRepository } from './repository.js';
 import { embedProduct } from './embedder.js';
+import type { Embedder } from './embedder.js';
 import { SEED_PRODUCTS } from './seed-data.js';
+
+/**
+ * Build the text blob used for embedding a product (matches the logic in embedProduct).
+ */
+function productToText(product: Pick<Product, 'name' | 'category' | 'description' | 'bestFor' | 'worstFor' | 'features'>): string {
+  const parts = [
+    product.name,
+    product.name,
+    product.category,
+    product.description,
+    ...product.bestFor.map((b) => `good for ${b}`),
+    ...product.worstFor.map((w) => `bad for ${w}`),
+    ...product.features,
+  ];
+  return parts.join(' ');
+}
 
 /**
  * Seed the database with the built-in product catalog.
  * Skips products that already exist (matched by name).
+ *
+ * When an `embedder` is provided (e.g. TransformerEmbedder), it is used to
+ * generate real semantic embeddings for each product. Otherwise the synchronous
+ * hash-based `embedProduct()` is used as a zero-dependency fallback.
  */
-export function seedDatabase(dbPath?: string): { inserted: number; skipped: number } {
+export async function seedDatabase(
+  dbPath?: string,
+  embedder?: Embedder,
+): Promise<{ inserted: number; skipped: number }> {
   const db = getDb(dbPath);
   const repo = new ProductRepository(db);
 
@@ -40,7 +64,10 @@ export function seedDatabase(dbPath?: string): { inserted: number; skipped: numb
       ...prog,
     }));
 
-    const embedding = embedProduct(product);
+    // Use the provided embedder for real semantic vectors, or fall back to hash-based embedProduct
+    const embedding = embedder
+      ? await embedder.embed(productToText(product))
+      : embedProduct(product);
 
     repo.insert(product, embedding, programs);
     inserted++;
@@ -61,7 +88,8 @@ const isMainModule =
   (process.argv[1].endsWith('/seeder.js') || process.argv[1].endsWith('/registry/seeder.js'));
 
 if (isMainModule) {
-  const result = seedDatabase();
-  console.log(`Seeding complete: ${result.inserted} inserted, ${result.skipped} skipped.`);
-  console.log(`Total products in registry: ${new ProductRepository(getDb()).count()}`);
+  seedDatabase().then((result) => {
+    console.log(`Seeding complete: ${result.inserted} inserted, ${result.skipped} skipped.`);
+    console.log(`Total products in registry: ${new ProductRepository(getDb()).count()}`);
+  });
 }

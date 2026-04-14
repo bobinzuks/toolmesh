@@ -3,7 +3,8 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadConfig } from './types/config.js';
 import { getDb } from './registry/database.js';
-import { HashEmbedder } from './registry/embedder.js';
+import type { Embedder } from './registry/embedder.js';
+import { HashEmbedder, TransformerEmbedder } from './registry/embedder.js';
 import { ProductRepository } from './registry/repository.js';
 import { RecommendationEngine } from './recommendation/engine.js';
 import { createServer } from './mcp/server.js';
@@ -26,23 +27,34 @@ async function main(): Promise<void> {
     const db = getDb(dbPath);
     log('Database initialized.');
 
-    // 3. Seed if empty
-    const seedResult = seedDatabase(dbPath);
+    // 3. Create embedder -- prefer real semantic embeddings, fall back to hash
+    let embedder: Embedder;
+    try {
+      embedder = new TransformerEmbedder();
+      log('Loading embedding model (first run downloads ~22MB)...');
+      await embedder.embed('warmup');
+      log('Embedding model ready.');
+    } catch (e) {
+      log('Transformer embeddings unavailable, using hash embedder.');
+      embedder = new HashEmbedder();
+    }
+
+    // 4. Seed if empty (uses the active embedder for better vectors when available)
+    const seedResult = await seedDatabase(dbPath, embedder);
     if (seedResult.inserted > 0) {
       log(`Seeded ${seedResult.inserted} products.`);
     }
     const count = db.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number };
     log(`Products in registry: ${count.count}`);
 
-    // 4. Create embedder, repository, engine
-    const embedder = new HashEmbedder();
+    // 5. Create repository, engine
     const repository = new ProductRepository(db);
     const engine = new RecommendationEngine(repository, embedder);
 
-    // 5. Create MCP server with tools
+    // 6. Create MCP server with tools
     const server = createServer(engine);
 
-    // 6. Connect to stdio transport
+    // 7. Connect to stdio transport
     const transport = new StdioServerTransport();
     await server.connect(transport);
 

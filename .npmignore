@@ -1,0 +1,35 @@
+# Source files
+src/
+tsconfig.json
+
+# Tests
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+
+# Development and tooling
+.claude/
+.swarm/
+.cursor/
+.vscode/
+.github/
+
+# Data and local state
+data/
+*.db
+
+# Config files
+.aanrc.json
+.mcp.json
+.gitignore
+.eslintrc*
+.prettierrc*
+
+# Documentation (README is included via package.json files field)
+docs/
+
+# Misc
+node_modules/
+*.tgz
+*.log

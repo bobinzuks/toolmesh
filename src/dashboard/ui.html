@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AAN Dashboard</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1117;--surface:#161b22;--border:#30363d;
+    --text:#e6edf3;--text-muted:#8b949e;--text-dim:#484f58;
+    --accent:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;
+    --font:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+    --radius:6px;
+  }
+  html{font-size:14px}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+
+  /* Layout */
+  .container{max-width:1280px;margin:0 auto;padding:1.5rem}
+
+  /* Header */
+  header{display:flex;align-items:center;justify-content:space-between;padding-bottom:1.5rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem}
+  header h1{font-size:1.25rem;font-weight:600;letter-spacing:-.02em}
+  header h1 span{color:var(--accent)}
+  .header-meta{display:flex;gap:1rem;align-items:center;color:var(--text-muted);font-size:.8rem}
+  .header-meta .dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block}
+  .header-meta .version{background:var(--surface);padding:2px 8px;border-radius:var(--radius);border:1px solid var(--border)}
+
+  /* Stats grid */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+  .stat-card .label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem}
+  .stat-card .value{font-size:1.75rem;font-weight:700}
+  .stat-card .sub{font-size:.75rem;color:var(--text-dim);margin-top:.25rem}
+
+  /* Sections */
+  section{margin-bottom:2rem}
+  section h2{font-size:1rem;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+  section h2 .badge{font-size:.7rem;background:var(--surface);border:1px solid var(--border);padding:1px 6px;border-radius:10px;color:var(--text-muted);font-weight:400}
+
+  /* Tables */
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  thead{background:var(--surface)}
+  th{text-align:left;padding:.6rem .75rem;font-weight:600;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:.6rem .75rem;border-bottom:1px solid var(--border);vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:rgba(88,166,255,.04)}
+
+  /* Trust score bar */
+  .trust-bar{display:flex;align-items:center;gap:.5rem}
+  .trust-bar .bar{flex:1;max-width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+  .trust-bar .bar .fill{height:100%;border-radius:3px;transition:width .3s}
+
+  /* Tags */
+  .tag{display:inline-block;font-size:.7rem;padding:1px 6px;border-radius:3px;background:rgba(88,166,255,.12);color:var(--accent);margin-right:4px}
+  .tag.green{background:rgba(63,185,80,.12);color:var(--green)}
+  .tag.yellow{background:rgba(210,153,34,.12);color:var(--yellow)}
+  .tag.red{background:rgba(248,81,73,.12);color:var(--red)}
+
+  /* Audit entries */
+  .audit-entry{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:.75rem}
+  .audit-entry .meta{display:flex;gap:1rem;flex-wrap:wrap;font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem}
+  .audit-entry .need{font-size:.9rem;margin-bottom:.5rem}
+  .audit-entry .details{display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.8rem}
+  .audit-entry .details .item{display:flex;gap:.35rem}
+  .audit-entry .details .item .lbl{color:var(--text-muted)}
+
+  /* Health bar */
+  .health-bar{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:.8rem;color:var(--text-muted);margin-bottom:1.5rem}
+  .health-bar .status-ok{color:var(--green)}
+  .health-bar .status-err{color:var(--red)}
+
+  /* Empty states */
+  .empty{text-align:center;padding:3rem 1rem;color:var(--text-dim);font-size:.9rem}
+
+  /* Refresh indicator */
+  .refresh-indicator{font-size:.7rem;color:var(--text-dim)}
+
+  /* Tabs */
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1rem}
+  .tab{padding:.5rem 1rem;font-size:.85rem;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><span>AAN</span> Dashboard</h1>
+    <div class="header-meta">
+      <span class="version" id="version">v0.1.0</span>
+      <span><span class="dot" id="health-dot"></span> <span id="health-text">connecting...</span></span>
+      <span class="refresh-indicator" id="refresh-timer">refresh in 30s</span>
+    </div>
+  </header>
+
+  <div class="health-bar" id="health-bar">
+    <span id="health-status">Checking server health...</span>
+  </div>
+
+  <div class="stats" id="stats-grid">
+    <div class="stat-card"><div class="label">Total Products</div><div class="value" id="stat-total">--</div><div class="sub" id="stat-total-sub"></div></div>
+    <div class="stat-card"><div class="label">Active Products</div><div class="value" id="stat-active">--</div></div>
+    <div class="stat-card"><div class="label">Categories</div><div class="value" id="stat-categories">--</div></div>
+    <div class="stat-card"><div class="label">Affiliate Programs</div><div class="value" id="stat-affiliates">--</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="products">Products</div>
+    <div class="tab" data-tab="audit">Audit Log</div>
+  </div>
+
+  <section id="section-products">
+    <h2>Product Registry <span class="badge" id="product-count">0</span></h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Trust Score</th>
+            <th>Pricing</th>
+            <th>Affiliates</th>
+            <th>Status</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody id="products-body">
+          <tr><td colspan="7" class="empty">Loading products...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="section-audit" style="display:none">
+    <h2>Audit Log <span class="badge" id="audit-count">0</span></h2>
+    <div id="audit-list">
+      <div class="empty">Loading audit log...</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const API = '';
+  let refreshInterval = null;
+  let countdown = 30;
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.tab;
+      document.getElementById('section-products').style.display = target === 'products' ? '' : 'none';
+      document.getElementById('section-audit').style.display = target === 'audit' ? '' : 'none';
+    });
+  });
+
+  async function fetchJson(url) {
+    try {
+      const res = await fetch(API + url);
+      if (!res.ok) throw new Error(res.statusText);
+      return await res.json();
+    } catch (e) {
+      console.error('Fetch error:', url, e);
+      return null;
+    }
+  }
+
+  function trustColor(score) {
+    if (score >= 0.7) return 'var(--green)';
+    if (score >= 0.4) return 'var(--yellow)';
+    return 'var(--red)';
+  }
+
+  function trustTag(score) {
+    if (score >= 0.7) return 'green';
+    if (score >= 0.4) return 'yellow';
+    return 'red';
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return '--';
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    const days = Math.floor(hrs / 24);
+    return days + 'd ago';
+  }
+
+  function escHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  async function loadHealth() {
+    const data = await fetchJson('/api/health');
+    const dot = document.getElementById('health-dot');
+    const text = document.getElementById('health-text');
+    const bar = document.getElementById('health-status');
+
+    if (data && data.status === 'ok') {
+      dot.style.background = 'var(--green)';
+      text.textContent = 'healthy';
+      const uptime = Math.floor(data.uptime);
+      const hrs = Math.floor(uptime / 3600);
+      const mins = Math.floor((uptime % 3600) / 60);
+      bar.innerHTML = '<span class="status-ok">Server OK</span> &middot; Uptime: ' + hrs + 'h ' + mins + 'm &middot; Version: ' + escHtml(data.version);
+      document.getElementById('version').textContent = 'v' + data.version;
+    } else {
+      dot.style.background = 'var(--red)';
+      text.textContent = 'offline';
+      bar.innerHTML = '<span class="status-err">Server unreachable</span>';
+    }
+  }
+
+  async function loadStats() {
+    const data = await fetchJson('/api/stats');
+    if (!data) return;
+
+    document.getElementById('stat-total').textContent = data.totalProducts;
+    document.getElementById('stat-active').textContent = data.activeProducts;
+    document.getElementById('stat-categories').textContent = data.categories;
+    document.getElementById('stat-affiliates').textContent = data.affiliatePrograms;
+
+    if (data.totalProducts > 0 && data.activeProducts < data.totalProducts) {
+      document.getElementById('stat-total-sub').textContent = (data.totalProducts - data.activeProducts) + ' inactive';
+    }
+  }
+
+  async function loadProducts() {
+    const data = await fetchJson('/api/products');
+    const tbody = document.getElementById('products-body');
+
+    if (!data || !data.products || data.products.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No products in registry. Run <code>aan seed</code> to populate.</td></tr>';
+      document.getElementById('product-count').textContent = '0';
+      return;
+    }
+
+    document.getElementById('product-count').textContent = data.products.length;
+
+    tbody.innerHTML = data.products.map(function(p) {
+      const color = trustColor(p.trustScore);
+      const pct = Math.round(p.trustScore * 100);
+      const tagCls = trustTag(p.trustScore);
+
+      return '<tr>' +
+        '<td><strong>' + escHtml(p.name) + '</strong></td>' +
+        '<td><span class="tag">' + escHtml(p.category) + '</span></td>' +
+        '<td><div class="trust-bar"><span class="tag ' + tagCls + '">' + pct + '%</span><div class="bar"><div class="fill" style="width:' + pct + '%;background:' + color + '"></div></div></div></td>' +
+        '<td>' + escHtml(p.pricing) + '</td>' +
+        '<td>' + (p.affiliateCount || 0) + '</td>' +
+        '<td>' + (p.active ? '<span class="tag green">active</span>' : '<span class="tag red">inactive</span>') + '</td>' +
+        '<td style="color:var(--text-dim)">' + timeAgo(p.updatedAt) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  async function loadAudit() {
+    const data = await fetchJson('/api/audit');
+    const container = document.getElementById('audit-list');
+
+    if (!data || !data.entries || data.entries.length === 0) {
+      container.innerHTML = '<div class="empty">No audit entries yet. Make some recommendations to populate this log.</div>';
+      document.getElementById('audit-count').textContent = '0';
+      return;
+    }
+
+    document.getElementById('audit-count').textContent = data.entries.length;
+
+    container.innerHTML = data.entries.slice().reverse().map(function(e) {
+      const passTag = e.sycophancyCheck.passed
+        ? '<span class="tag green">PASSED</span>'
+        : '<span class="tag red">FAILED</span>';
+
+      return '<div class="audit-entry">' +
+        '<div class="meta">' +
+          '<span>' + escHtml(e.timestamp) + '</span>' +
+          passTag +
+        '</div>' +
+        '<div class="need">' + escHtml(e.requestNeed) + '</div>' +
+        '<div class="details">' +
+          '<div class="item"><span class="lbl">Selected:</span> ' + escHtml(e.selectedProductId) + '</div>' +
+          '<div class="item"><span class="lbl">Candidates:</span> ' + e.candidateCount + '</div>' +
+          '<div class="item"><span class="lbl">Top fit:</span> ' + escHtml(e.topByFit.id) + ' (' + e.topByFit.fitScore.toFixed(3) + ')</div>' +
+          (e.topByCommission ? '<div class="item"><span class="lbl">Top commission:</span> ' + escHtml(e.topByCommission.id) + ' ($' + e.topByCommission.payout.toFixed(2) + ')</div>' : '') +
+          (e.sycophancyCheck.reason ? '<div class="item"><span class="lbl">Reason:</span> ' + escHtml(e.sycophancyCheck.reason) + '</div>' : '') +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  async function refresh() {
+    await Promise.all([loadHealth(), loadStats(), loadProducts(), loadAudit()]);
+    countdown = 30;
+  }
+
+  function startCountdown() {
+    setInterval(function() {
+      countdown--;
+      const el = document.getElementById('refresh-timer');
+      if (countdown <= 0) {
+        el.textContent = 'refreshing...';
+        refresh().then(function() { countdown = 30; });
+      } else {
+        el.textContent = 'refresh in ' + countdown + 's';
+      }
+    }, 1000);
+  }
+
+  refresh();
+  startCountdown();
+})();
+</script>
+</body>
+</html>

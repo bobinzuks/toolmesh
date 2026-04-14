@@ -4,11 +4,11 @@ import { seedDatabase } from './registry/seeder.js';
 import { getDb, closeDb } from './registry/database.js';
 import { ProductRepository } from './registry/repository.js';
 
-function main(): void {
+async function main(): Promise<void> {
   console.log('Seeding AAN product registry...\n');
 
   try {
-    const result = seedDatabase();
+    const result = await seedDatabase();
 
     if (result.inserted === 0 && result.skipped > 0) {
       console.log(`Database already seeded. ${result.skipped} products skipped (already exist).`);

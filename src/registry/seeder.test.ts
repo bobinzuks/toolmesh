@@ -23,9 +23,9 @@ describe('seedDatabase', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('creates products in an empty database', () => {
+  it('creates products in an empty database', async () => {
     resetDb(dbPath);
-    const result = seedDatabase(dbPath);
+    const result = await seedDatabase(dbPath);
 
     assert.ok(result.inserted > 0, `should insert at least one product, got ${result.inserted}`);
     assert.strictEqual(result.skipped, 0, 'nothing should be skipped on first run');
@@ -36,17 +36,17 @@ describe('seedDatabase', () => {
     assert.strictEqual(count, result.inserted, 'count should match inserted');
   });
 
-  it('is idempotent (running twice does not duplicate)', () => {
+  it('is idempotent (running twice does not duplicate)', async () => {
     // Reset to a fresh db
     const freshPath = join(tmpDir, `test-idempotent-${crypto.randomUUID()}.db`);
     resetDb(freshPath);
 
-    const first = seedDatabase(freshPath);
+    const first = await seedDatabase(freshPath);
     assert.ok(first.inserted > 0);
 
     // Reset the module-level singleton so seedDatabase can use the same path
     resetDb(freshPath);
-    const second = seedDatabase(freshPath);
+    const second = await seedDatabase(freshPath);
     assert.strictEqual(second.inserted, 0, 'second run should insert nothing');
     assert.strictEqual(second.skipped, first.inserted, 'second run should skip all');
 
@@ -56,10 +56,10 @@ describe('seedDatabase', () => {
     assert.strictEqual(count, first.inserted, 'total count should remain the same');
   });
 
-  it('seeded products have valid embeddings (can be searched)', () => {
+  it('seeded products have valid embeddings (can be searched)', async () => {
     const searchPath = join(tmpDir, `test-search-${crypto.randomUUID()}.db`);
     resetDb(searchPath);
-    seedDatabase(searchPath);
+    await seedDatabase(searchPath);
 
     const db = resetDb(searchPath);
     const repo = new ProductRepository(db);
@@ -71,10 +71,10 @@ describe('seedDatabase', () => {
     assert.ok(results[0].fitScore > 0, 'results should have positive similarity scores');
   });
 
-  it('seeded products span multiple categories', () => {
+  it('seeded products span multiple categories', async () => {
     const catPath = join(tmpDir, `test-categories-${crypto.randomUUID()}.db`);
     resetDb(catPath);
-    seedDatabase(catPath);
+    await seedDatabase(catPath);
 
     const db = resetDb(catPath);
     const repo = new ProductRepository(db);

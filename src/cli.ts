@@ -25,16 +25,22 @@ Usage:
   aan <command>
 
 Commands:
-  init      Write MCP config entries for detected editors
-  seed      Seed the database with initial products
-  status    Show database stats
-  serve     Start the MCP server
-  help      Show this help message
+  init              Write MCP config entries for detected editors
+  seed              Seed the database with initial products
+  status            Show database stats
+  serve             Start the MCP server
+  dashboard         Start the developer dashboard
+  help              Show this help message
+
+Options (dashboard):
+  --port <number>   Port for dashboard server (default: 3847)
 
 Examples:
   aan init          # Configure editors to use AAN
   aan seed          # Populate product database
   aan status        # Check database health
+  aan dashboard     # Start dashboard on port 3847
+  aan dashboard --port 8080
 `.trim();
 
 // ---------------------------------------------------------------------------
@@ -113,11 +119,11 @@ function cmdInit(): void {
   }
 }
 
-function cmdSeed(): void {
+async function cmdSeed(): Promise<void> {
   console.log('Seeding AAN product registry...\n');
 
   try {
-    const result = seedDatabase();
+    const result = await seedDatabase();
 
     if (result.inserted === 0 && result.skipped > 0) {
       console.log(`Database already seeded. ${result.skipped} products skipped (already exist).`);
@@ -174,6 +180,38 @@ function cmdStatus(): void {
   }
 }
 
+function cmdDashboard(args: string[]): void {
+  // Parse --port flag
+  let port = 3847;
+  const portIdx = args.indexOf('--port');
+  if (portIdx !== -1 && args[portIdx + 1]) {
+    const parsed = parseInt(args[portIdx + 1], 10);
+    if (!Number.isNaN(parsed) && parsed > 0 && parsed < 65536) {
+      port = parsed;
+    } else {
+      console.error(`Invalid port: ${args[portIdx + 1]}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  try {
+    const db = getDb();
+
+    // Dynamic import to avoid loading dashboard code unless needed
+    import('./dashboard/server.js').then(({ startDashboard }) => {
+      startDashboard(port, db);
+    }).catch((err) => {
+      console.error('Failed to start dashboard:', err instanceof Error ? err.message : err);
+      closeDb();
+      process.exitCode = 1;
+    });
+  } catch (err) {
+    console.error('Failed to initialize database:', err instanceof Error ? err.message : err);
+    process.exitCode = 1;
+  }
+}
+
 async function cmdServe(): Promise<void> {
   // Dynamically import the main index to start the MCP server.
   // This avoids loading the server module unless actually needed.
@@ -189,7 +227,7 @@ async function cmdServe(): Promise<void> {
 // Main
 // ---------------------------------------------------------------------------
 
-function main(): void {
+async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0]?.toLowerCase() ?? 'help';
 
@@ -198,13 +236,16 @@ function main(): void {
       cmdInit();
       break;
     case 'seed':
-      cmdSeed();
+      await cmdSeed();
       break;
     case 'status':
       cmdStatus();
       break;
     case 'serve':
       cmdServe();
+      break;
+    case 'dashboard':
+      cmdDashboard(args.slice(1));
       break;
     case 'help':
     case '--help':
