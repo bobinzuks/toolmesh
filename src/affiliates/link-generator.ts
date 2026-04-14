@@ -10,7 +10,7 @@ import { NETWORKS } from './types.js';
 import type { AffiliateLink } from './types.js';
 
 export interface GenerateLinkOptions {
-  /** The base affiliate URL (e.g. https://aan.dev/go/digitalocean). */
+  /** The base affiliate URL (e.g. https://toolmesh.dev/go/digitalocean). */
   baseLink: string;
   /** Network slug — must match a key in NETWORKS. */
   network: string;
@@ -104,12 +104,12 @@ function appendParams(baseUrl: string, params: Record<string, string>): string {
  * @example
  * ```ts
  * const url = generateLink({
- *   baseLink: 'https://aan.dev/go/digitalocean',
+ *   baseLink: 'https://toolmesh.dev/go/digitalocean',
  *   network: 'cj-affiliate',
  *   subAffiliateId: 'dev-abc123',
  *   source: 'mcp-recommend',
  * });
- * // => "https://aan.dev/go/digitalocean?sid=dev-abc123&utm_source=aan&utm_medium=agent-recommendation&utm_campaign=mcp-recommend"
+ * // => "https://toolmesh.dev/go/digitalocean?sid=dev-abc123&utm_source=aan&utm_medium=agent-recommendation&utm_campaign=mcp-recommend"
  * ```
  */
 export function generateLink(options: GenerateLinkOptions): AffiliateLink {

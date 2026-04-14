@@ -15,7 +15,7 @@ import {
 
 export function createServer(engine: RecommendationEngine): McpServer {
   const server = new McpServer({
-    name: 'agent-affiliate-network',
+    name: 'toolmesh',
     version: '0.1.0',
   });
 

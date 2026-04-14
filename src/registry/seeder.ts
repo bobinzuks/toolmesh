@@ -5,7 +5,17 @@ import { ProductRepository } from './repository.js';
 import { embedProduct } from './embedder.js';
 import type { Embedder } from './embedder.js';
 import { SEED_PRODUCTS } from './seed-data.js';
+import { EXTENDED_PRODUCTS_1 } from './seed-data-extended-1.js';
+import { EXTENDED_PRODUCTS_2 } from './seed-data-extended-2.js';
+import { EXTENDED_PRODUCTS_3 } from './seed-data-extended-3.js';
 import { loadProductsConfig, customEntryToProduct, getLinkOverrides } from './custom-products.js';
+
+const ALL_SEED_PRODUCTS = [
+  ...SEED_PRODUCTS,
+  ...EXTENDED_PRODUCTS_1,
+  ...EXTENDED_PRODUCTS_2,
+  ...EXTENDED_PRODUCTS_3,
+];
 
 /**
  * Build the text blob used for embedding a product (matches the logic in embedProduct).
@@ -41,7 +51,7 @@ export async function seedDatabase(
   let inserted = 0;
   let skipped = 0;
 
-  for (const seed of SEED_PRODUCTS) {
+  for (const seed of ALL_SEED_PRODUCTS) {
     // Skip if a product with this name already exists
     const existing = repo.findByName(seed.product.name);
     if (existing) {

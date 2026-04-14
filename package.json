@@ -1,12 +1,12 @@
 {
-  "name": "@aan/mcp",
+  "name": "@toolmesh/mcp",
   "version": "0.1.0",
-  "description": "Agent Affiliate Network — AI agents recommend SaaS products, you earn commissions",
+  "description": "ToolMesh — The developer tool directory for AI agents. Find, compare, and recommend 200+ tools.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "aan": "dist/cli.js",
-    "aan-mcp": "dist/index.js"
+    "toolmesh": "dist/cli.js",
+    "toolmesh-mcp": "dist/index.js"
   },
   "files": [
     "dist/",
@@ -38,11 +38,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bobinzuks/agent-affiliate-network.git"
+    "url": "https://github.com/bobinzuks/toolmesh.git"
   },
-  "homepage": "https://github.com/bobinzuks/agent-affiliate-network#readme",
+  "homepage": "https://github.com/bobinzuks/toolmesh#readme",
   "bugs": {
-    "url": "https://github.com/bobinzuks/agent-affiliate-network/issues"
+    "url": "https://github.com/bobinzuks/toolmesh/issues"
   },
   "publishConfig": {
     "access": "public"

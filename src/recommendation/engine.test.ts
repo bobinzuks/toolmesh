@@ -1,5 +1,5 @@
 // Set threshold for tests (engine reads from env at module load time)
-process.env.AAN_CONFIDENCE_THRESHOLD = '0.7';
+process.env.TOOLMESH_CONFIDENCE_THRESHOLD = '0.7';
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';

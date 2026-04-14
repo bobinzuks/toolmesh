@@ -253,7 +253,7 @@ export class GossipEngine {
         signal: AbortSignal.timeout(5000),
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'AAN-Mesh/0.1.0',
+          'User-Agent': 'ToolMesh/0.1.0',
         },
       });
       if (!res.ok) {
@@ -280,7 +280,7 @@ export class GossipEngine {
         signal: AbortSignal.timeout(5000),
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'AAN-Mesh/0.1.0',
+          'User-Agent': 'ToolMesh/0.1.0',
         },
         body: JSON.stringify(message),
       });
@@ -307,7 +307,7 @@ export class GossipEngine {
         signal: AbortSignal.timeout(5000),
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'AAN-Mesh/0.1.0',
+          'User-Agent': 'ToolMesh/0.1.0',
         },
         body: JSON.stringify({
           type: 'peer_announcement',
@@ -331,7 +331,7 @@ export class GossipEngine {
 // ---------------------------------------------------------------------------
 
 /**
- * Create the Agent Affiliate Network's own agent card with its four
+ * Create the ToolMesh's own agent card with its four
  * core skills described for A2A discovery.
  */
 export function createAanAgentCard(config: { url: string; version: string }): AgentCard {
@@ -387,7 +387,7 @@ export function createAanAgentCard(config: { url: string; version: string }): Ag
   ];
 
   return {
-    name: 'Agent Affiliate Network',
+    name: 'ToolMesh',
     description:
       'Curated product discovery and affiliate recommendations for AI agents. ' +
       'Semantic search across SaaS tools with multi-perspective scoring.',

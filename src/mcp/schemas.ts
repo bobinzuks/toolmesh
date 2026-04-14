@@ -3,7 +3,9 @@ import { z } from 'zod';
 export const CATEGORIES = [
   'database', 'auth', 'hosting', 'email', 'analytics', 'monitoring',
   'cms', 'payments', 'storage', 'search', 'ci-cd', 'testing',
-  'api-gateway', 'message-queue', 'cdn', 'dns', 'logging', 'other',
+  'api-gateway', 'message-queue', 'cdn', 'dns', 'logging',
+  'mcp-server', 'ai-llm', 'api', 'dev-tools', 'design',
+  'communication', 'security', 'infrastructure', 'seo', 'other',
 ] as const;
 
 export type Category = typeof CATEGORIES[number];

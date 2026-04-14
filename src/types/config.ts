@@ -14,13 +14,13 @@ const DEFAULT_CONFIG: AanConfig = {
   affiliateIds: {},
   excludedProducts: [],
   preferredCategories: [],
-  dataDir: join(homedir(), '.aan'),
+  dataDir: join(homedir(), '.toolmesh'),
 };
 
 export function loadConfig(): AanConfig {
   const configPaths = [
-    join(process.cwd(), '.aanrc.json'),
-    join(homedir(), '.aanrc.json'),
+    join(process.cwd(), '.toolmeshrc.json'),
+    join(homedir(), '.toolmeshrc.json'),
   ];
 
   for (const configPath of configPaths) {

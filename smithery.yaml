@@ -7,6 +7,6 @@ startCommand:
   commandFunction: |
     (config) => ({
       command: "npx",
-      args: ["-y", "@aan/mcp"],
+      args: ["-y", "@toolmesh/mcp"],
       env: {}
     })

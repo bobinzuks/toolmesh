@@ -182,7 +182,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     programs: [
       {
         network: 'dub-partners',
-        affiliateLink: 'https://aan.dev/go/vercel',
+        affiliateLink: 'https://toolmesh.dev/go/vercel',
         payoutType: 'recurring',
         payoutAmount: 50,
         payoutCurrency: 'USD',
@@ -312,7 +312,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     programs: [
       {
         network: 'cj-affiliate',
-        affiliateLink: 'https://aan.dev/go/digitalocean',
+        affiliateLink: 'https://toolmesh.dev/go/digitalocean',
         payoutType: 'recurring',
         payoutAmount: 200,
         payoutCurrency: 'USD',
@@ -321,7 +321,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       },
       {
         network: 'impact',
-        affiliateLink: 'https://aan.dev/go/digitalocean-impact',
+        affiliateLink: 'https://toolmesh.dev/go/digitalocean-impact',
         payoutType: 'per-sale',
         payoutAmount: 100,
         payoutCurrency: 'USD',
@@ -507,7 +507,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     programs: [
       {
         network: 'direct',
-        affiliateLink: 'https://aan.dev/go/mailchimp',
+        affiliateLink: 'https://toolmesh.dev/go/mailchimp',
         payoutType: 'per-sale',
         payoutAmount: 30,
         payoutCurrency: 'USD',
@@ -516,7 +516,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       },
       {
         network: 'cj-affiliate',
-        affiliateLink: 'https://aan.dev/go/mailchimp-cj',
+        affiliateLink: 'https://toolmesh.dev/go/mailchimp-cj',
         payoutType: 'per-sale',
         payoutAmount: 20,
         payoutCurrency: 'USD',
@@ -542,7 +542,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     programs: [
       {
         network: 'rewardful',
-        affiliateLink: 'https://aan.dev/go/convertkit',
+        affiliateLink: 'https://toolmesh.dev/go/convertkit',
         payoutType: 'recurring',
         payoutAmount: 30,
         payoutCurrency: 'USD',
@@ -942,7 +942,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     programs: [
       {
         network: 'impact',
-        affiliateLink: 'https://aan.dev/go/semrush',
+        affiliateLink: 'https://toolmesh.dev/go/semrush',
         payoutType: 'per-sale',
         payoutAmount: 200,
         payoutCurrency: 'USD',
@@ -951,7 +951,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
       },
       {
         network: 'impact',
-        affiliateLink: 'https://aan.dev/go/semrush-trial',
+        affiliateLink: 'https://toolmesh.dev/go/semrush-trial',
         payoutType: 'per-signup',
         payoutAmount: 10,
         payoutCurrency: 'USD',

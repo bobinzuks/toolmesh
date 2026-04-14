@@ -192,7 +192,7 @@ function sendJson(res: ServerResponse, status: number, data: unknown): void {
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(body),
-    'User-Agent': 'AAN-Mesh/0.1.0',
+    'User-Agent': 'ToolMesh/0.1.0',
   });
   res.end(body);
 }

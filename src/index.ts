@@ -13,7 +13,7 @@ import { join } from 'node:path';
 
 async function main(): Promise<void> {
   // All startup logging goes to stderr — stdout is reserved for MCP protocol
-  const log = (...args: unknown[]) => console.error('[aan]', ...args);
+  const log = (...args: unknown[]) => console.error('[toolmesh]', ...args);
 
   try {
     log('Starting Agent Affiliate Network MCP server...');
@@ -29,8 +29,8 @@ async function main(): Promise<void> {
 
     // 3. Create embedder -- prefer real semantic embeddings, fall back to hash
     let embedder: Embedder;
-    if (process.env.AAN_EMBEDDER === 'hash') {
-      log('Using hash embedder (AAN_EMBEDDER=hash).');
+    if (process.env.TOOLMESH_EMBEDDER === 'hash') {
+      log('Using hash embedder (TOOLMESH_EMBEDDER=hash).');
       embedder = new HashEmbedder();
     } else {
       try {
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
 
     log('MCP server running on stdio. Ready for connections.');
   } catch (error) {
-    console.error('[aan] Fatal error during startup:', error);
+    console.error('[toolmesh] Fatal error during startup:', error);
     process.exit(1);
   }
 }

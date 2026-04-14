@@ -12,7 +12,7 @@ import { ensureProductsJson, loadProductsConfig } from './registry/custom-produc
 // ---------------------------------------------------------------------------
 
 const VERSION = '0.1.0';
-const PACKAGE_NAME = '@aan/mcp';
+const PACKAGE_NAME = '@toolmesh/mcp';
 
 const MCP_SERVER_ENTRY = {
   command: 'npx',
@@ -20,10 +20,10 @@ const MCP_SERVER_ENTRY = {
 };
 
 const HELP_TEXT = `
-aan — Agent Affiliate Network CLI (v${VERSION})
+toolmesh — Developer tool directory for AI agents (v${VERSION})
 
 Usage:
-  aan <command>
+  toolmesh <command>
 
 Commands:
   init              Write MCP config entries for detected editors
@@ -46,14 +46,14 @@ Options (well-known):
   --output <dir>    Output directory (default: ./public)
 
 Examples:
-  aan init          # Configure editors to use AAN
-  aan seed          # Populate product database
-  aan status        # Check database health
-  aan dashboard     # Start dashboard on port 3847
-  aan dashboard --port 8080
-  aan agent-card    # Print A2A Agent Card JSON
-  aan agent-card --url https://your-domain.com
-  aan well-known --output ./public
+  toolmesh init          # Configure editors to use AAN
+  toolmesh seed          # Populate product database
+  toolmesh status        # Check database health
+  toolmesh dashboard     # Start dashboard on port 3847
+  toolmesh dashboard --port 8080
+  toolmesh agent-card    # Print A2A Agent Card JSON
+  toolmesh agent-card --url https://your-domain.com
+  toolmesh well-known --output ./public
 `.trim();
 
 // ---------------------------------------------------------------------------
@@ -117,7 +117,7 @@ function cmdInit(): void {
       mkdirSync(editor.dirNeeded, { recursive: true });
     }
 
-    // Add AAN entry
+    // Add ToolMesh entry
     servers.aan = MCP_SERVER_ENTRY;
 
     writeJsonFile(editor.path, config);
@@ -126,14 +126,14 @@ function cmdInit(): void {
   }
 
   if (configured === 0) {
-    console.log('\nNo changes made. AAN is already configured in all detected editors.');
+    console.log('\nNo changes made. ToolMesh is already configured in all detected editors.');
   } else {
     console.log(`\nConfigured ${configured} editor(s). Restart your editor to activate AAN.`);
   }
 }
 
 async function cmdSeed(): Promise<void> {
-  console.log('Seeding AAN product registry...\n');
+  console.log('Seeding ToolMesh product registry...\n');
 
   try {
     const result = await seedDatabase();
@@ -168,7 +168,7 @@ function cmdStatus(): void {
       'SELECT category, COUNT(*) AS cnt FROM products GROUP BY category ORDER BY cnt DESC',
     ).all() as Array<{ category: string; cnt: number }>;
 
-    console.log('AAN Registry Status\n');
+    console.log('ToolMesh Registry Status\n');
     console.log(`  Total products:      ${totalProducts}`);
     console.log(`  Active products:     ${activeProducts}`);
     console.log(`  Affiliate programs:  ${affiliateCount}`);
@@ -244,7 +244,7 @@ function cmdProducts(): void {
   const path = ensureProductsJson();
   const config = loadProductsConfig();
 
-  console.log('AAN Products Configuration\n');
+  console.log('ToolMesh Products Configuration\n');
   console.log(`  File: ${path}\n`);
 
   const overrides = config.link_overrides ?? {};

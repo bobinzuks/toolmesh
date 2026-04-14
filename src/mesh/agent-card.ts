@@ -116,7 +116,7 @@ export interface AgentCardConfig {
  */
 export function generateAgentCard(config?: AgentCardConfig): AgentCard {
   return {
-    name: 'Agent Affiliate Network',
+    name: 'ToolMesh',
     description: 'Commission-blind product recommendations for AI agents',
     version: config?.version ?? DEFAULT_VERSION,
     url: config?.url ?? DEFAULT_URL,
