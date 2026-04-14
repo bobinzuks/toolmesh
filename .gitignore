@@ -7,3 +7,4 @@ dist/
 .claude-flow/
 .claude/
 mcp-stderr.log
+.playwright-mcp/
