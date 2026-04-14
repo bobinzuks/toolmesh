@@ -5,3 +5,5 @@ dist/
 .env
 .swarm/
 .claude-flow/
+.claude/
+mcp-stderr.log

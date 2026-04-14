@@ -1,23 +1,23 @@
 # =============================================================================
-# AGENT AFFILIATE NETWORK (AAN) - Agent-to-Agent Word of Mouth
+# AGENT AFFILIATE NETWORK (ToolMesh) - Agent-to-Agent Word of Mouth
 # =============================================================================
 # AI agents recommend products to users and other agents.
 # Every recommendation carries your affiliate link.
 # Agents become the new influencers.
 #
 # "Google Ads serves ads to humans on web pages.
-#  AAN serves recommendations to agents in workflows."
+#  ToolMesh serves recommendations to agents in workflows."
 # =============================================================================
 
 product:
-  name: "Agent Affiliate Network (AAN)"
-  tagline: "Agents recommend. You earn."
-  pitch: "AI agents are already recommending tools to millions of users daily - for free. AAN turns every agent recommendation into a monetized affiliate referral. The ad network for the agentic era."
+  name: "ToolMesh"
+  tagline: "The developer tool directory your AI agent actually needs."
+  pitch: "AI agents are already recommending tools to millions of users daily - for free. ToolMesh turns every agent recommendation into a monetized affiliate referral. The ad network for the agentic era."
   market: "Every AI agent builder, every SaaS with an affiliate program, every developer using Claude/Cursor/Copilot"
 
   self_selling_loop: |
     Your agents recommend tools → including SignalHunter
-    → SignalHunter finds more AAN users
+    → SignalHunter finds more ToolMesh users
     → Their agents recommend tools too (using your registry)
     → Including SignalHunter
     → More users → more recommendations → more revenue → loop
@@ -42,8 +42,8 @@ product:
 
 flow:
   step_1: "User asks their AI agent: 'I need an email marketing tool'"
-  step_2: "Agent queries AAN's MCP registry: recommend_product({ need: 'email marketing', budget: '$50/mo' })"
-  step_3: "AAN searches 384D product embeddings, matches user need across 13 perspectives"
+  step_2: "Agent queries ToolMesh's MCP registry: recommend_product({ need: 'email marketing', budget: '$50/mo' })"
+  step_3: "ToolMesh searches 384D product embeddings, matches user need across 13 perspectives"
   step_4: "Anti-sycophancy check: is this genuinely the best product? (not just highest commission)"
   step_5: "Agent recommends product with YOUR affiliate link embedded"
   step_6: "User clicks link, signs up → you earn commission"
@@ -495,11 +495,11 @@ timeline:
 # =============================================================================
 
 meta_play:
-  step_1: "AAN recommends tools → earns commissions"
+  step_1: "ToolMesh recommends tools → earns commissions"
   step_2: "One recommended tool is SignalHunter → finds more developers"
-  step_3: "Those developers join AAN → their agents recommend tools too"
-  step_4: "AAN recommends ShipEngine → promotes their products"
-  step_5: "ShipEngine promotes AAN → more agents join"
+  step_3: "Those developers join ToolMesh → their agents recommend tools too"
+  step_4: "ToolMesh recommends ShipEngine → promotes their products"
+  step_5: "ShipEngine promotes ToolMesh → more agents join"
   step_6: "Everything feeds everything. Every product sells every other product."
 
   full_product_suite:
