@@ -5,6 +5,7 @@ import { ProductRepository } from './repository.js';
 import { embedProduct } from './embedder.js';
 import type { Embedder } from './embedder.js';
 import { SEED_PRODUCTS } from './seed-data.js';
+import { loadProductsConfig, customEntryToProduct, getLinkOverrides } from './custom-products.js';
 
 /**
  * Build the text blob used for embedding a product (matches the logic in embedProduct).
@@ -71,6 +72,50 @@ export async function seedDatabase(
 
     repo.insert(product, embedding, programs);
     inserted++;
+  }
+
+  // Load custom products from products.json
+  const customConfig = loadProductsConfig();
+  if (customConfig.products) {
+    for (const entry of customConfig.products) {
+      if (entry.name === 'Example Product') continue; // skip the template
+      const existing = repo.findByName(entry.name);
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      const { product: prodData, programs: progData } = customEntryToProduct(entry);
+      const now = new Date().toISOString();
+      const productId = crypto.randomUUID();
+
+      const product: Product = { id: productId, createdAt: now, updatedAt: now, ...prodData };
+      const programs: AffiliateProgram[] = progData.map((prog) => ({
+        id: crypto.randomUUID(),
+        productId,
+        ...prog,
+      }));
+
+      const embedding = embedder
+        ? await embedder.embed(productToText(product))
+        : embedProduct(product);
+
+      repo.insert(product, embedding, programs);
+      inserted++;
+    }
+  }
+
+  // Apply link overrides from products.json (update existing products' affiliate links)
+  const overrides = getLinkOverrides();
+  for (const [productName, newLink] of Object.entries(overrides)) {
+    if (newLink.includes('YOUR_')) continue; // skip unfilled placeholders
+    const product = repo.findByName(productName);
+    if (product) {
+      const programs = repo.getAffiliatePrograms(product.id);
+      if (programs.length > 0) {
+        repo.updateAffiliateLink(programs[0].id, newLink);
+      }
+    }
   }
 
   return { inserted, skipped };

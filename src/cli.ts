@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { seedDatabase } from './registry/seeder.js';
 import { getDb, closeDb } from './registry/database.js';
 import { ProductRepository } from './registry/repository.js';
+import { ensureProductsJson, loadProductsConfig } from './registry/custom-products.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -28,6 +29,7 @@ Commands:
   init              Write MCP config entries for detected editors
   seed              Seed the database with initial products
   status            Show database stats
+  products          Create/show products.json for custom products and affiliate links
   serve             Start the MCP server
   dashboard         Start the developer dashboard
   help              Show this help message
@@ -224,6 +226,47 @@ async function cmdServe(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// products — Create/show products.json
+// ---------------------------------------------------------------------------
+
+function cmdProducts(): void {
+  const path = ensureProductsJson();
+  const config = loadProductsConfig();
+
+  console.log('AAN Products Configuration\n');
+  console.log(`  File: ${path}\n`);
+
+  const overrides = config.link_overrides ?? {};
+  const filledOverrides = Object.entries(overrides).filter(([, v]) => !v.includes('YOUR_'));
+  const customProducts = (config.products ?? []).filter((p) => p.name !== 'Example Product');
+
+  console.log(`  Link overrides: ${Object.keys(overrides).length} defined, ${filledOverrides.length} active`);
+  console.log(`  Custom products: ${customProducts.length}\n`);
+
+  if (filledOverrides.length > 0) {
+    console.log('  Active link overrides:');
+    for (const [name, url] of filledOverrides) {
+      console.log(`    ${name} -> ${url}`);
+    }
+    console.log();
+  }
+
+  if (customProducts.length > 0) {
+    console.log('  Custom products:');
+    for (const p of customProducts) {
+      const links = p.affiliate_links.length;
+      console.log(`    ${p.name} (${p.category}) — ${links} affiliate link${links !== 1 ? 's' : ''}`);
+    }
+    console.log();
+  }
+
+  console.log('  Edit the file to:');
+  console.log('    1. Replace YOUR_... placeholders in link_overrides with real affiliate IDs');
+  console.log('    2. Add new products to the products array');
+  console.log('    3. Run "aan seed" to load changes into the database');
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -246,6 +289,9 @@ async function main(): Promise<void> {
       break;
     case 'dashboard':
       cmdDashboard(args.slice(1));
+      break;
+    case 'products':
+      cmdProducts();
       break;
     case 'help':
     case '--help':

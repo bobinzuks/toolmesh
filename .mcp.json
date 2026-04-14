@@ -23,7 +23,10 @@
         "tsx",
         "/run/media/bobinzuks/82ae4087-99fd-4170-b394-3f47ac90dca1/projects/projects/agent-affiliate-network/src/index.ts"
       ],
-      "env": {}
+      "env": {
+        "AAN_EMBEDDER": "hash",
+        "AAN_CONFIDENCE_THRESHOLD": "0.15"
+      }
     }
   }
 }

@@ -19,7 +19,7 @@ import { checkAntiSycophancy, logAudit } from './anti-sycophancy.js';
 
 // ---------- Configuration ----------
 
-const CONFIDENCE_THRESHOLD = 0.7;
+const CONFIDENCE_THRESHOLD = parseFloat(process.env.AAN_CONFIDENCE_THRESHOLD ?? '0.15');
 const DEFAULT_K = 10;
 const DEFAULT_MAX_RESULTS = 3;
 

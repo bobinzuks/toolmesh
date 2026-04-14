@@ -29,14 +29,19 @@ async function main(): Promise<void> {
 
     // 3. Create embedder -- prefer real semantic embeddings, fall back to hash
     let embedder: Embedder;
-    try {
-      embedder = new TransformerEmbedder();
-      log('Loading embedding model (first run downloads ~22MB)...');
-      await embedder.embed('warmup');
-      log('Embedding model ready.');
-    } catch (e) {
-      log('Transformer embeddings unavailable, using hash embedder.');
+    if (process.env.AAN_EMBEDDER === 'hash') {
+      log('Using hash embedder (AAN_EMBEDDER=hash).');
       embedder = new HashEmbedder();
+    } else {
+      try {
+        embedder = new TransformerEmbedder();
+        log('Loading embedding model (first run downloads ~22MB)...');
+        await embedder.embed('warmup');
+        log('Embedding model ready.');
+      } catch (e) {
+        log('Transformer embeddings unavailable, using hash embedder.');
+        embedder = new HashEmbedder();
+      }
     }
 
     // 4. Seed if empty (uses the active embedder for better vectors when available)
