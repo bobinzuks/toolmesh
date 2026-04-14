@@ -13,7 +13,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc && cp src/dashboard/ui.html dist/dashboard/ui.html",
+    "build": "tsc && cp src/dashboard/ui.html dist/dashboard/ui.html && mkdir -p dist/redirect && cp src/redirect/links.json dist/redirect/links.json",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "seed": "node dist/seed.js",

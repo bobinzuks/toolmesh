@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { RecommendationEngine } from '../recommendation/engine.js';
+import { detectInstalledMcpServers } from '../registry/detect-installed.js';
 import {
   formatRecommendation,
   formatComparison,
@@ -153,9 +154,16 @@ export function createServer(engine: RecommendationEngine): McpServer {
     'Analyze what MCP servers are missing from your setup and suggest useful additions based on gap analysis or project type.',
     SuggestSkillsInput.shape,
     async ({ current_tools, project_type, max_suggestions }) => {
-      const currentTools = current_tools
-        ? current_tools.split(',').map((s) => s.trim())
-        : undefined;
+      // Auto-detect installed MCP servers if user didn't specify
+      let currentTools: string[] | undefined;
+      if (current_tools) {
+        currentTools = current_tools.split(',').map((s) => s.trim());
+      } else {
+        const detected = detectInstalledMcpServers();
+        if (detected.length > 0) {
+          currentTools = detected;
+        }
+      }
 
       const suggestions = await engine.suggestSkills({
         currentTools,

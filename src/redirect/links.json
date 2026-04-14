@@ -1,0 +1,23 @@
+{
+  "_comment": "Map of product slug -> affiliate URL. Edit this file to set your real affiliate links.",
+  "digitalocean": "https://m.do.co/c/YOUR_REFERRAL_CODE",
+  "vercel": "https://vercel.com/?ref=YOUR_ID",
+  "convertkit": "https://app.convertkit.com/referrals/YOUR_ID",
+  "mailchimp": "https://mailchimp.com/referral/?aid=YOUR_ID",
+  "semrush": "https://www.semrush.com/?ref=YOUR_PARTNER_ID",
+  "supabase": "https://supabase.com",
+  "stripe": "https://stripe.com",
+  "neon": "https://neon.tech",
+  "planetscale": "https://planetscale.com",
+  "vercel-hosting": "https://vercel.com",
+  "netlify": "https://netlify.com",
+  "railway": "https://railway.app",
+  "clerk": "https://clerk.com",
+  "auth0": "https://auth0.com",
+  "postmark": "https://postmarkapp.com",
+  "resend": "https://resend.com",
+  "paddle": "https://paddle.com",
+  "posthog": "https://posthog.com",
+  "sentry": "https://sentry.io",
+  "algolia": "https://algolia.com"
+}

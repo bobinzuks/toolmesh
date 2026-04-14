@@ -8,6 +8,7 @@ import { SEED_PRODUCTS } from './seed-data.js';
 import { EXTENDED_PRODUCTS_1 } from './seed-data-extended-1.js';
 import { EXTENDED_PRODUCTS_2 } from './seed-data-extended-2.js';
 import { EXTENDED_PRODUCTS_3 } from './seed-data-extended-3.js';
+import { EXTENDED_PRODUCTS_4 } from './seed-data-extended-4.js';
 import { loadProductsConfig, customEntryToProduct, getLinkOverrides, validateAffiliateUrl } from './custom-products.js';
 import { signAllLinks } from './link-integrity.js';
 
@@ -16,6 +17,7 @@ const ALL_SEED_PRODUCTS = [
   ...EXTENDED_PRODUCTS_1,
   ...EXTENDED_PRODUCTS_2,
   ...EXTENDED_PRODUCTS_3,
+  ...EXTENDED_PRODUCTS_4,
 ];
 
 /**

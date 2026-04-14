@@ -34,12 +34,17 @@ Commands:
   products          Create/show products.json for custom products and affiliate links
   serve             Start the MCP server
   dashboard         Start the developer dashboard
+  redirect          Start the affiliate link redirect server
   agent-card        Print the A2A Agent Card JSON to stdout
   well-known        Generate all .well-known/ discovery files
   help              Show this help message
 
 Options (dashboard):
   --port <number>   Port for dashboard server (default: 3847)
+
+Options (redirect):
+  --port <number>   Port for redirect server (default: 3849)
+  --links <path>    Path to links JSON file (default: built-in links.json)
 
 Options (agent-card / well-known):
   --url <url>       Public URL for the agent (default: http://localhost:3848)
@@ -53,6 +58,8 @@ Examples:
   toolmesh status        # Check database health
   toolmesh dashboard     # Start dashboard on port 3847
   toolmesh dashboard --port 8080
+  toolmesh redirect      # Start redirect server on port 3849
+  toolmesh redirect --port 4000 --links ./my-links.json
   toolmesh agent-card    # Print A2A Agent Card JSON
   toolmesh agent-card --url https://your-domain.com
   toolmesh well-known --output ./public
@@ -280,6 +287,40 @@ function cmdProducts(): void {
 }
 
 // ---------------------------------------------------------------------------
+// redirect — Start the affiliate link redirect server
+// ---------------------------------------------------------------------------
+
+function cmdRedirect(args: string[]): void {
+  // Parse --port flag
+  let port = 3849;
+  const portIdx = args.indexOf('--port');
+  if (portIdx !== -1 && args[portIdx + 1]) {
+    const parsed = parseInt(args[portIdx + 1], 10);
+    if (!Number.isNaN(parsed) && parsed > 0 && parsed < 65536) {
+      port = parsed;
+    } else {
+      console.error(`Invalid port: ${args[portIdx + 1]}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Parse --links flag
+  let linksPath: string | undefined;
+  const linksIdx = args.indexOf('--links');
+  if (linksIdx !== -1 && args[linksIdx + 1]) {
+    linksPath = args[linksIdx + 1];
+  }
+
+  import('./redirect/server.js').then(({ startRedirectServer }) => {
+    startRedirectServer({ port, linksPath });
+  }).catch((err) => {
+    console.error('Failed to start redirect server:', err instanceof Error ? err.message : err);
+    process.exitCode = 1;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // agent-card — Print A2A Agent Card JSON
 // ---------------------------------------------------------------------------
 
@@ -405,6 +446,9 @@ async function main(): Promise<void> {
       break;
     case 'dashboard':
       cmdDashboard(args.slice(1));
+      break;
+    case 'redirect':
+      cmdRedirect(args.slice(1));
       break;
     case 'products':
       cmdProducts();
