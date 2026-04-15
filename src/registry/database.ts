@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { join, dirname } from 'node:path';
 import { mkdirSync, chmodSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
 
 let db: Database.Database | null = null;
 
@@ -50,7 +51,7 @@ const VEC_TABLE_SQL = `
 `;
 
 function initializeDatabase(dbPath?: string): Database.Database {
-  const resolvedPath = dbPath ?? join(process.cwd(), 'data', 'registry.db');
+  const resolvedPath = dbPath ?? join(homedir(), '.toolmesh', 'registry.db');
 
   mkdirSync(dirname(resolvedPath), { recursive: true });
 
