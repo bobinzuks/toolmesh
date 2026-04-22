@@ -58,6 +58,14 @@ export const InstallSkillInput = z.object({
   editor: z.enum(['claude-code', 'cursor', 'windsurf', 'generic']).default('claude-code'),
 });
 
+export const OUTCOME_TYPES = ['click', 'signup', 'retain', 'churn'] as const;
+
+export const ReportOutcomeInput = z.object({
+  product_name: z.string().describe('Name of the product the outcome is about'),
+  outcome: z.enum(OUTCOME_TYPES).describe('What happened: click (visited affiliate link), signup (created account), retain (still using after 30 days), churn (stopped using)'),
+  trajectory_id: z.string().optional().describe('Trajectory ID from a previous recommendation result. If omitted, matches the most recent recommendation containing this product.'),
+});
+
 export type RecommendProductParams = z.infer<typeof RecommendProductInput>;
 export type CompareProductsParams = z.infer<typeof CompareProductsInput>;
 export type FindAlternativeParams = z.infer<typeof FindAlternativeInput>;
@@ -65,3 +73,4 @@ export type GetStackParams = z.infer<typeof GetStackInput>;
 export type DiscoverSkillsParams = z.infer<typeof DiscoverSkillsInput>;
 export type SuggestSkillsParams = z.infer<typeof SuggestSkillsInput>;
 export type InstallSkillParams = z.infer<typeof InstallSkillInput>;
+export type ReportOutcomeParams = z.infer<typeof ReportOutcomeInput>;

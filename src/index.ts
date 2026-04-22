@@ -10,6 +10,8 @@ import { RecommendationEngine } from './recommendation/engine.js';
 import { createServer } from './mcp/server.js';
 import { seedDatabase } from './registry/seeder.js';
 import { verifyAllLinks } from './registry/link-integrity.js';
+import { ProductGraph } from './graph/product-graph.js';
+import { SonaEngine } from './learning/sona-engine.js';
 import { join } from 'node:path';
 
 async function main(): Promise<void> {
@@ -65,9 +67,28 @@ async function main(): Promise<void> {
       log(`All ${integrity.valid} affiliate links verified.`);
     }
 
-    // 5. Create repository, engine
+    // 5. Create repository, product graph, engine
     const repository = new ProductRepository(db);
-    const engine = new RecommendationEngine(repository, embedder);
+
+    // Build product relationship graph for coherent stack recommendations
+    const allProducts = repository.listAll();
+    const productGraph = new ProductGraph(allProducts);
+    productGraph.buildGraph();
+    const graphStats = productGraph.getStats();
+    log(`Product graph: ${graphStats.nodes} nodes, ${graphStats.edges} edges, ${graphStats.clusters} clusters.`);
+
+    // Initialize SONA learning engine (uses the same SQLite database)
+    const sona = new SonaEngine(db);
+    const sonaStats = sona.getStats();
+    log(`SONA learning engine: ${sonaStats.completedTrajectories} completed trajectories, ${sonaStats.patterns} patterns.`);
+
+    // Abandon stale trajectories from previous runs
+    const abandoned = sona.abandonStale();
+    if (abandoned > 0) {
+      log(`Abandoned ${abandoned} stale SONA trajectories.`);
+    }
+
+    const engine = new RecommendationEngine(repository, embedder, productGraph, sona);
 
     // 6. Create MCP server with tools
     const server = createServer(engine);

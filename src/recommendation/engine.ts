@@ -18,6 +18,9 @@ import { scorePerspectives, computeCompositeFit } from './perspectives.js';
 import { computeConfidence } from './confidence.js';
 import { checkAntiSycophancy, logAudit } from './anti-sycophancy.js';
 import { verifyLink } from '../registry/link-integrity.js';
+import type { ProductGraph } from '../graph/product-graph.js';
+import type { SonaEngine } from '../learning/sona-engine.js';
+import type { TrajectoryAction } from '../learning/types.js';
 
 // ---------- Configuration ----------
 
@@ -265,10 +268,17 @@ function extractGithubUrlFromPrograms(programs: AffiliateProgram[]): string {
 export class RecommendationEngine {
   private readonly repository: ProductRepository;
   private readonly embedder: Embedder;
+  private readonly graph: ProductGraph | null;
+  private readonly sona: SonaEngine | null;
 
-  constructor(repository: ProductRepository, embedder: Embedder) {
+  /** Maps product names to active trajectory IDs for outcome reporting. */
+  private readonly activeTrajectories = new Map<string, { trajectoryId: string; embedding: Float32Array }>();
+
+  constructor(repository: ProductRepository, embedder: Embedder, graph?: ProductGraph, sona?: SonaEngine) {
     this.repository = repository;
     this.embedder = embedder;
+    this.graph = graph ?? null;
+    this.sona = sona ?? null;
   }
 
   /**
@@ -322,6 +332,16 @@ export class RecommendationEngine {
     for (const candidate of candidates) {
       const perspectives = scorePerspectives(candidate, request);
       candidate.fitScore = computeCompositeFit(perspectives);
+    }
+
+    // Step 5b: SONA score adjustment -- boost products learned from past trajectories
+    if (this.sona) {
+      const scoreMap = new Map<string, number>();
+      for (const c of candidates) scoreMap.set(c.id, c.fitScore);
+      const adjusted = this.sona.adjustScores(embedding, scoreMap);
+      for (const c of candidates) {
+        c.fitScore = adjusted.get(c.id) ?? c.fitScore;
+      }
     }
 
     candidates.sort((a, b) => b.fitScore - a.fitScore);
@@ -378,6 +398,37 @@ export class RecommendationEngine {
       );
     }
 
+    // Step 8b: Graph-based exclusion -- avoid recommending direct competitors together
+    if (this.graph && aboveThreshold.length > 1) {
+      const filtered: typeof aboveThreshold = [];
+      const excludedIds = new Set<string>();
+
+      for (const item of aboveThreshold) {
+        if (excludedIds.has(item.candidate.id)) continue;
+        filtered.push(item);
+        // Mark this product's competitors as excluded from further selection
+        const exclusions = this.graph.getExclusions(item.candidate.id);
+        for (const exId of exclusions) {
+          excludedIds.add(exId);
+        }
+      }
+
+      // Replace aboveThreshold with the de-duplicated list.
+      // Keep at least maxResults if possible by back-filling from the original
+      // list if the filtered set is too small.
+      if (filtered.length < maxResults) {
+        for (const item of aboveThreshold) {
+          if (!filtered.some((f) => f.candidate.id === item.candidate.id)) {
+            filtered.push(item);
+          }
+          if (filtered.length >= maxResults) break;
+        }
+      }
+
+      aboveThreshold.length = 0;
+      aboveThreshold.push(...filtered);
+    }
+
     // Step 9 & 10: Generate reasoning + FTC disclosure
     const selected = aboveThreshold.slice(0, maxResults);
 
@@ -409,6 +460,27 @@ export class RecommendationEngine {
       );
     }
 
+    // SONA: begin trajectory and record recommend steps
+    let trajectoryId: string | undefined;
+    if (this.sona && recommendations.length > 0) {
+      try {
+        trajectoryId = this.sona.beginTrajectory(embedding);
+        for (const rec of recommendations) {
+          const product = this.repository.findByName(rec.name);
+          if (product) {
+            this.sona.addStep(trajectoryId, product.id, 'recommend', 0);
+            // Store mapping so reportOutcome can find this trajectory
+            this.activeTrajectories.set(rec.name.toLowerCase(), {
+              trajectoryId,
+              embedding,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[toolmesh] SONA trajectory error (non-fatal):', err);
+      }
+    }
+
     return {
       status: 'served',
       recommendations,
@@ -418,7 +490,66 @@ export class RecommendationEngine {
         confidenceThreshold: getConfidenceThreshold(),
         candidatesBelowThreshold: belowThreshold,
       },
+      trajectoryId,
     };
+  }
+
+  /**
+   * Report a post-recommendation outcome so SONA can learn.
+   *
+   * @param productName - The product the outcome is about.
+   * @param outcome - What happened: 'click', 'signup', 'retain', or 'churn'.
+   * @param trajectoryId - Optional trajectory ID. If omitted, looks up the most
+   *   recent trajectory that included this product.
+   */
+  reportOutcome(
+    productName: string,
+    outcome: TrajectoryAction,
+    trajectoryId?: string,
+  ): { recorded: boolean; trajectoryId?: string } {
+    if (!this.sona) {
+      return { recorded: false };
+    }
+
+    const product = this.repository.findByName(productName);
+    if (!product) {
+      return { recorded: false };
+    }
+
+    // Resolve trajectory ID
+    let resolvedId = trajectoryId;
+    if (!resolvedId) {
+      const entry = this.activeTrajectories.get(productName.toLowerCase());
+      if (entry) {
+        resolvedId = entry.trajectoryId;
+      }
+    }
+
+    if (!resolvedId) {
+      return { recorded: false };
+    }
+
+    // Map outcome to reward
+    const rewardMap: Record<string, number> = {
+      click: 0.3,
+      signup: 0.7,
+      retain: 0.9,
+      churn: -0.2,
+    };
+    const reward = rewardMap[outcome] ?? 0;
+
+    this.sona.addStep(resolvedId, product.id, outcome, reward);
+
+    // Terminal outcomes end the trajectory
+    if (outcome === 'retain' || outcome === 'churn') {
+      const quality = outcome === 'retain' ? 0.9 : 0.2;
+      this.sona.endTrajectory(resolvedId, quality);
+      // Trigger consolidation after terminal outcomes
+      this.sona.consolidate();
+      this.activeTrajectories.delete(productName.toLowerCase());
+    }
+
+    return { recorded: true, trajectoryId: resolvedId };
   }
 
   /**
@@ -526,33 +657,79 @@ export class RecommendationEngine {
 
   /**
    * Build a recommended tool stack for a project type.
-   * Searches each inferred category independently and picks the best match.
+   * When a ProductGraph is available, uses getStackPartners() to ensure the
+   * recommended products complement each other.  Falls back to independent
+   * per-category search when no graph is present.
    */
   async getStack(request: StackRequest): Promise<StackResult> {
     const categories = inferCategories(request.requirements);
     const layers: StackResult['layers'] = [];
 
-    for (const category of categories) {
-      const queryText = `${request.projectType} ${category} ${request.requirements.join(' ')}`;
-      const queryEmbedding = await this.embedder.embed(queryText);
-      const results = this.repository.searchByEmbedding(
-        queryEmbedding,
-        3,
-        { category },
-      );
+    // Step 1: Find the anchor product (first category, best vector match)
+    const anchorCategory = categories[0];
+    const anchorQuery = `${request.projectType} ${anchorCategory} ${request.requirements.join(' ')}`;
+    const anchorEmbedding = await this.embedder.embed(anchorQuery);
+    const anchorResults = this.repository.searchByEmbedding(anchorEmbedding, 3, {
+      category: anchorCategory,
+    });
 
-      if (results.length > 0) {
-        const best = results[0];
-        const affiliates = this.repository.getAffiliatePrograms(best.id);
+    const anchor = anchorResults.length > 0 ? anchorResults[0] : null;
+
+    if (anchor) {
+      const affiliates = this.repository.getAffiliatePrograms(anchor.id);
+      layers.push({
+        category: anchorCategory,
+        recommended: anchor.name,
+        fitScore: Math.min(anchor.perspectiveScores.semantic + 0.2, 1),
+        reasoning: `Best match for ${anchorCategory} needs in a ${request.projectType} project.`,
+        affiliateUrl: affiliates.length > 0 ? affiliates[0].affiliateLink : '',
+        pricing: anchor.pricing,
+      });
+    }
+
+    // Step 2: Fill remaining categories using graph partners or fallback search
+    const remainingCategories = categories.slice(1);
+
+    // Try graph-based partner selection first
+    let graphPartners = new Map<string, Product>();
+    if (this.graph && anchor) {
+      graphPartners = this.graph.getStackPartners(anchor.id, remainingCategories);
+    }
+
+    for (const category of remainingCategories) {
+      const graphPick = graphPartners.get(category);
+
+      if (graphPick) {
+        // Use the graph-recommended complement
+        const affiliates = this.repository.getAffiliatePrograms(graphPick.id);
         layers.push({
           category,
-          recommended: best.name,
-          fitScore: Math.min(best.perspectiveScores.semantic + 0.2, 1),
-          reasoning: `Best match for ${category} needs in a ${request.projectType} project.`,
-          affiliateUrl:
-            affiliates.length > 0 ? affiliates[0].affiliateLink : '',
-          pricing: best.pricing,
+          recommended: graphPick.name,
+          fitScore: graphPick.trustScore,
+          reasoning: `Complements ${anchor!.name} for ${category} in a ${request.projectType} project (graph-optimised).`,
+          affiliateUrl: affiliates.length > 0 ? affiliates[0].affiliateLink : '',
+          pricing: graphPick.pricing,
         });
+      } else {
+        // Fallback: independent vector search for this category
+        const queryText = `${request.projectType} ${category} ${request.requirements.join(' ')}`;
+        const queryEmbedding = await this.embedder.embed(queryText);
+        const results = this.repository.searchByEmbedding(queryEmbedding, 3, {
+          category,
+        });
+
+        if (results.length > 0) {
+          const best = results[0];
+          const affiliates = this.repository.getAffiliatePrograms(best.id);
+          layers.push({
+            category,
+            recommended: best.name,
+            fitScore: Math.min(best.perspectiveScores.semantic + 0.2, 1),
+            reasoning: `Best match for ${category} needs in a ${request.projectType} project.`,
+            affiliateUrl: affiliates.length > 0 ? affiliates[0].affiliateLink : '',
+            pricing: best.pricing,
+          });
+        }
       }
     }
 

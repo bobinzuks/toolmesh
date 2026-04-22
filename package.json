@@ -50,6 +50,9 @@
   "dependencies": {
     "@huggingface/transformers": "^4.0.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@ruvector/core": "^0.1.31",
+    "@ruvector/gnn": "^0.1.25",
+    "@ruvector/sona": "^0.1.6",
     "better-sqlite3": "^11.0.0",
     "sqlite-vec": "^0.1.0",
     "zod": "^3.25.0"

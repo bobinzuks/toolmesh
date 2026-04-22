@@ -18,6 +18,7 @@ import {
   DiscoverSkillsInput,
   SuggestSkillsInput,
   InstallSkillInput,
+  ReportOutcomeInput,
 } from './schemas.js';
 
 export function createServer(engine: RecommendationEngine): McpServer {
@@ -216,6 +217,36 @@ export function createServer(engine: RecommendationEngine): McpServer {
           {
             type: 'text' as const,
             text: lines.join('\n'),
+          },
+        ],
+      };
+    },
+  );
+
+  // Tool 8: report_outcome
+  server.tool(
+    'report_outcome',
+    'Report what happened after a recommendation (click, signup, retain, or churn). Closes the feedback loop so the engine learns which recommendations work.',
+    ReportOutcomeInput.shape,
+    async ({ product_name, outcome, trajectory_id }) => {
+      const result = engine.reportOutcome(product_name, outcome, trajectory_id);
+
+      if (!result.recorded) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: `Could not record outcome for "${product_name}". The product was not found or no active trajectory exists. Ensure the product name matches a recent recommendation.`,
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `Outcome recorded: ${outcome} for "${product_name}" (trajectory: ${result.trajectoryId}). The learning engine will use this to improve future recommendations.`,
           },
         ],
       };
