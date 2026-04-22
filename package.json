@@ -19,7 +19,7 @@
     "seed": "node dist/seed.js",
     "init": "node dist/cli.js init",
     "prepublishOnly": "npm run build",
-    "test": "node --import tsx --test src/**/*.test.ts"
+    "test": "node --import tsx --test src/**/*.test.ts tests/**/*.test.ts tests/*.test.ts"
   },
   "keywords": [
     "mcp",
